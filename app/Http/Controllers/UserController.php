@@ -14,10 +14,10 @@ class UserController extends Controller
     public function index()
     {
         $users = User::all();
-        $users->load('bitacoras');
-        $users->load('empresa');
-        $users->load('perfil');
-        $users->load('contrasenas');
+        #$users->load('bitacoras');
+        #$users->load('empresa');
+        #$users->load('perfil');
+        #$users->load('contrasenas');
         
         return response()->json([
             'data' => $users
@@ -79,7 +79,7 @@ class UserController extends Controller
                 ],202);
             }
 
-            $user->load('bitacoras');
+            #$user->load('bitacoras');
             $user->load('empresa');
             #$user->load('perfil');
 
