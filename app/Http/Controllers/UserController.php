@@ -15,7 +15,6 @@ class UserController extends Controller
     {
         $users = User::all();
         #$users->load('bitacoras');
-        #$users->load('empresa');
         #$users->load('perfil');
         #$users->load('contrasenas');
         
