@@ -37,7 +37,7 @@ Route::group([
 
     // Access only for logged in users
     Route::group([
-        'middleware' => 'auth:api'
+        'middleware' => 'auth:sanctum'
     ], function() {
         Route::put('/{id}', [UserController::class, 'update']);
         Route::delete('delete/{id}', [UserController::class, 'destroy']);

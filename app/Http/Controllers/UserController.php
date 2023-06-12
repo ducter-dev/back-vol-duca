@@ -2,14 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\LoginEvent;
+use App\Events\LogoutEvent;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Resources\UserResource;
+use App\Http\Requests\AuthenticatedSessionRequest;
+use App\Traits\ApiResponder;
+use Carbon\Carbon;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
+    use ApiResponder;
     
     public function index()
     {
@@ -17,10 +25,12 @@ class UserController extends Controller
         #$users->load('bitacoras');
         #$users->load('perfil');
         #$users->load('contrasenas');
-        
-        return response()->json([
-            'data' => $users
+        $users = UserResource::collection($users)->additional([
+            'status' => 'success',
+            "message" => 'Información consultada correctamente.',
         ]);
+        
+        return $users;
     }
 
     public function register(Request $request)
@@ -79,12 +89,12 @@ class UserController extends Controller
             }
 
             #$user->load('bitacoras');
-            $user->load('empresa');
+            #$user->load('empresa');
             #$user->load('perfil');
 
             return response()->json([
                 'data' => $user
-            ],202);
+            ],200);
         } catch (\Throwable $th) {
             return response()->json($th->getMessage(), 501);
         }
@@ -158,85 +168,54 @@ class UserController extends Controller
         }
     }
 
-    public function login(Request $request)
+    public function login(AuthenticatedSessionRequest $request)
     {
-        $nombreUsuario = $request->usuario;
-        /* $userBloqueo = User::where('usuario', $nombreUsuario)->first(); */
+        $user = User::firstWhere('usuario', request('usuario'));
+        $tokenName = null;
 
-        /* if ($userBloqueo) {
-            $bloqueo = Bloqueado::where('usuario_id', $userBloqueo->id)->orderBy('id', 'desc')->first();
-            $fecha_hora_actual = date("d-m-Y H:i:s");
-            if ($bloqueo) {
-                if (strtotime($bloqueo->fecha_desbloqueo) > strtotime($fecha_hora_actual)) {
-                    return response()->json([
-                        'message' => 'Usuario bloqueado, intente en 15 minutos.',
-                    ], 401);
-                }
-            } 
-        } */
-
-        $credentials = $request->validate([
-            $this->username() => ['required'],
-            'password' => ['required']
-        ]);
-
-        $credentials = request(['usuario', 'password']);
-        if (!Auth::attempt($credentials)) {
-            return response()->json([
-                'message' => 'No autorizado.'
-            ], 401);
-        }
-        
-        $user = $request->user();
-
-        if ($user->estado >= 2) {
-            return response()->json([
-                'message' => 'Usuario inactivo por sistema.'
-            ], 401);
-        }
-
-        
-
-        $accessToken = $user->createToken('authToken')->accessToken;
-
-        /* $bitacora = new Bitacora();
-        $bitacora->fecha = date('Y-m-d');
-        $bitacora->fecha_hora = date('Y-m-d H:i:s');
-        $bitacora->tipoevento_id = 1;
-        $bitacora->descripcion1 = 'El usuario ' . $user->usuario;
-        $bitacora->descripcion2 = 'inició sesión';
-        $bitacora->descripcion3 = 'desde la ip => ' . $request->ip();
-        $bitacora->usuario_id = $user->id;
-        $bitacora->save();
-
-        $hoy = date('Y-m-d H:i:s');
-        $contrasenaUser = ContrasenaUser::where('usuario_id', $user->id)->where('estado', 1)->orderBy('id', 'DESC')->first();
-        if (!$contrasenaUser) {
-            $caducidad = strtotime('+2 months', strtotime($hoy));
-            $caducidad = date('Y-m-d H:i:s', $caducidad);
-
-            $request['password'] = Hash::make($request['password']);
-            $user->contrasena = $request['contrasena'];
-            $contraUser = new ContrasenaUser();
-            $contraUser->contrasena = $request['password'];
-            $contraUser->caducidad = $caducidad;
-            $contraUser->ultimoAcceso = date('Y-m-d H:i:s');
-            $contraUser->estado = 1;
-            $contraUser->usuario_id = $user->id;
-            $user->contrasenas()->save($contraUser);
+        if (isset($user->id)) {
+            $model = $user;
+            $tokenName = 'user_auth_token';
         } else {
-            // Retornar si está caducada
-            if ($hoy >= $contrasenaUser->caducidad) {
-                return response()->json([
-                    'message'=> 'La contraseña ha caducado',
-                    'user' => $user
-                ],401);
-            }
-            $contrasenaUser->ultimoAcceso = $hoy;
-            $contrasenaUser->save();
-        } */
+            throw ValidationException::withMessages([
+                'email' => 'Estas credenciales no coinciden con nuestros registros.'
+            ]);
+        }
 
-        return response(['user' => Auth::user(), 'access_token' => $accessToken]);
+        if (Hash::check(request('password'), $user->contrasena)) {
+
+            try {
+                $tz = config('app.timezone');
+                $now = Carbon::now($tz);
+                $minutesToAdd = config('sanctum.expiration');
+                //dd($user->tokens());
+                /* if ($user->tokens()->whereTime('expires_at', '>', $now->format('YmdHis'))->count() > 0) {
+                    throw ValidationException::withMessages([
+                        'account' => 'Actualmente tiene una sesión activa.'
+                    ]);
+                } */
+                
+                $token = $user->createToken($tokenName, $user->getAllPermissionsSlug()->toArray(), $now->addMinutes($minutesToAdd));
+                //dd($token);
+                //dd($token->plainTextToken);
+                $user->access_token = $token->plainTextToken;
+                $user->sign_in_at =  $token->accessToken->created_at->format('Y-m-d H:i:s');
+                $user->sign_in_expires_at =  $token->accessToken->expires_at->format('Y-m-d H:i:s');
+    
+                event(new LoginEvent($user));
+    
+                $resource = new UserResource($user);
+                return $this->success('Inicio de sesión exitoso.', [
+                    'user' => $resource
+                ]);
+            } catch (\Exception $e) {
+                return $this->error("Error al inicair sesión, error:{$e->getMessage()}.");
+            }
+        } else {
+            throw ValidationException::withMessages([
+                'password' => 'No matchea las passowrds'
+            ]);
+        }
     }
 
     public function logout(Request $request)
