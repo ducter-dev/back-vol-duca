@@ -172,22 +172,18 @@ class UserController extends Controller
     {
         $user = User::firstWhere('usuario', request('usuario'));
         $tokenName = null;
-
+        $tz = config('app.timezone');
+        $now = Carbon::now($tz);
+        $minutesToAdd = config('sanctum.expiration');
         if (isset($user->id)) {
-            $model = $user;
-            $tokenName = 'user_auth_token';
+            $tokenName = 'user_auth_token' . $now->format('YmdHis');
         } else {
-            throw ValidationException::withMessages([
-                'email' => 'Estas credenciales no coinciden con nuestros registros.'
-            ]);
+            return $this->error("Estas credenciales no coinciden con nuestros registros.");
         }
 
         if (Hash::check(request('password'), $user->contrasena)) {
-
             try {
-                $tz = config('app.timezone');
-                $now = Carbon::now($tz);
-                $minutesToAdd = config('sanctum.expiration');
+                
                 //dd($user->tokens());
                 /* if ($user->tokens()->whereTime('expires_at', '>', $now->format('YmdHis'))->count() > 0) {
                     throw ValidationException::withMessages([
@@ -209,12 +205,10 @@ class UserController extends Controller
                     'user' => $resource
                 ]);
             } catch (\Exception $e) {
-                return $this->error("Error al inicair sesión, error:{$e->getMessage()}.");
+                return $this->error("Error al iniciir sesión, error:{$e->getMessage()}.");
             }
         } else {
-            throw ValidationException::withMessages([
-                'password' => 'No matchea las passowrds'
-            ]);
+            return $this->error("No matchea las passowrds");
         }
     }
 
