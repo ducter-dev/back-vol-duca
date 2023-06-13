@@ -76,10 +76,10 @@ class ObtenerSalidas extends Command
     
                 }
             } else {
-                $this->info("\e[91m!No existen salidas para la fecha \e[96$lastDay! \e[39m😔") ;
+                $this->info("\e[91m!No existen salidas para la fecha \e[96$lastDay! \e[39m😔\n") ;
             }
         } catch (\Throwable $th) {
-            $this->info("\e[91mError al registrar salidas.");
+            $this->info("\e[91mError al registrar salidas.\n");
         }
     }
 }
