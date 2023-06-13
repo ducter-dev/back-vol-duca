@@ -39,14 +39,16 @@ class ObtenerEntradas extends Command
             $lastDay = $lastDay->format('Y-m-d');
             $balanceTPA = 0;
     
-            /* Obtener las salidas del ducto EB00 */
+            /* Obtener el balance de duca */
             $balance = Balance::where('fecha', $lastDay)->first();
-    
+            
+            /* Obtener el balance de tpa */
             $balanceTPA = DB::connection('mysqlTPA')->table('balances')
-                            ->select()
-                            ->whereRaw("fecha = ?", [$lastDay])
-                            ->first();
-    
+                        ->select()
+                        ->whereRaw("fecha = ?", [$lastDay])
+                        ->first();
+            
+            /* Obtener las salidas del ducto EB00 */
             $salidasEB00 = DB::connection('mysqlTPA')->table('salidasDetalle')
                             ->select()
                             ->whereRaw("balance_id = ? AND tipo = ?", [$balanceTPA->id_balance,'d'])
@@ -66,7 +68,7 @@ class ObtenerEntradas extends Command
                 $this->info("\e[91m!No existen salidas para la fecha \e[96$lastDay! \e[39m😔") ;
             }
         } catch (\Throwable $th) {
-            $this->info("Error al egistrar entradas.");
+            $this->info("\e[91mError al registrar entradas.");
         }
     }
 }
