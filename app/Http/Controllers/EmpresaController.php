@@ -18,6 +18,7 @@ use DateTime;
 use DateTimeZone;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use ZipArchive;
 
 class EmpresaController extends Controller
 {
@@ -264,6 +265,7 @@ class EmpresaController extends Controller
                 array_push($clientesVentas, $raw);
             }
 
+
             /* Obtener el dictamen que se usará */
             $dictamenes = $balance->dictamenes;
 
@@ -271,7 +273,7 @@ class EmpresaController extends Controller
                 $bitacora = new Bitacora();
                 $bitacora->fecha = date('Y-m-d');
                 $bitacora->fecha_hora = date('Y-m-d H:i:s');
-                $bitacora->tipoevento_id = 19;
+                $bitacora->evento_id = 19;
                 $bitacora->descripcion1 = 'Error en generación de archivo json, no hay dictamen selecionado. ';
                 $bitacora->descripcion2 = 'usuario: ' . $request->user()->usuario;
                 $bitacora->descripcion3 = 'fecha ' . $fechaBalance;
@@ -291,7 +293,6 @@ class EmpresaController extends Controller
                 $volRecibido = is_null($recepcionGas->recibido) ? 0 : $recepcionGas->recibido;
                 foreach ($dictamenes as $dic) {
                     $dic->load('cliente');
-                    dd($dic);
                 }
             } else {
                 $dictamenes->load('cliente');
@@ -328,8 +329,8 @@ class EmpresaController extends Controller
                     ->first();
 
                 # Checar la cantidad de gas recibido  
-                $volRecibido = is_null($recepcionGas->recibido) ? 0 : $recepcionGas->recibido;
-                
+                #$volRecibido = is_null($recepcionGas->recibido) ? 0 : $recepcionGas->recibido;
+                $volRecibido = is_null($totalVentasIrge) ? 0 : $totalVentasIrge;
 
                 $entregaLlenadera = DB::table('balances_duca.salidas')
                     ->select(DB::raw('SUM(valor) AS recibido'))
@@ -431,6 +432,7 @@ class EmpresaController extends Controller
                     $totalEntradasEB00 = $totalEntradasEB00 + floatval($entrada['valor']);
                 }
 
+                #dd($totalEntradasEB00);
                 /** 
                  * $registrosEntradas -> Entradas IRGE <-
                 */
@@ -458,7 +460,7 @@ class EmpresaController extends Controller
                     $restanteAlmTanqueRec = 0;
                     $inventarioInicialRec = 0;
                     
-                    #$registroAlmTanqueAnterior = ContenedorBalance::where('balance_id', '<', $balance->id_balance)->where('contenedor_id', $idTanque)->orderBy('balance_id', 'desc')->first();
+                    #$registroAlmTanqueAnterior = ContenedorBalance::where('balance_id', '<', $balance->id)->where('contenedor_id', $idTanque)->orderBy('balance_id', 'desc')->first();
                     $registroAlmTanqueAnterior = 0;
                     $indexEntrada = 0;
                     
@@ -1063,9 +1065,9 @@ class EmpresaController extends Controller
                     'DescripcionInstalacion' => $descripcion_instalacion,
                     'NumeroPozos' => 0,
                     'NumeroTanques' => 0,
-                    'NumeroDuctosEntradaSalida' => 14,
+                    'NumeroDuctosEntradaSalida' => 2,
                     'NumeroDuctosTransporteDistribucion' => 0,
-                    'NumeroDispensarios' => 0,
+                    'NumeroDispensarios' => '?',
                     'FechaYHoraCorte' => $fechaHoraCorte,
                     'Producto' => $prodArray,
                     'Bitacora' => $bitacoraRegistros
@@ -1080,17 +1082,17 @@ class EmpresaController extends Controller
                 $hash5 = substr(str_shuffle($permitted_chars), 0,12);
                 $numeroEnvio = '';
                 switch (true) {
-                    case $balance->id_balance < 10:
-                        $numeroEnvio = 'ALM-000' . $balance->id_balance;
+                    case $balance->id < 10:
+                        $numeroEnvio = 'ALM-000' . $balance->id;
                         break;
-                    case $balance->id_balance < 100 && $balance->id_balance > 9:
-                        $numeroEnvio = 'ALM-00' . $balance->id_balance;
+                    case $balance->id < 100 && $balance->id > 9:
+                        $numeroEnvio = 'ALM-00' . $balance->id;
                         break;
-                    case $balance->id_balance < 1000 && $balance->id_balance > 99:
-                        $numeroEnvio = 'ALM-0' . $balance->id_balance;
+                    case $balance->id < 1000 && $balance->id > 99:
+                        $numeroEnvio = 'ALM-0' . $balance->id;
                         break;
-                    case $balance->id_balance < 10000 && $balance->id_balance > 999:
-                        $numeroEnvio = 'ALM-' . $balance->id_balance;
+                    case $balance->id < 10000 && $balance->id > 999:
+                        $numeroEnvio = 'ALM-' . $balance->id;
                         break;
                 }
                 $fileNameZip = "D_". $hash1. "-" . $hash2 . "-" . $hash3. "-" . $hash4 . "-" . $hash5  . "_" . $empresa->rfc_contribuyente . "_" . $empresa->proveedor . "_" . $fechaBalance . "_" . $numeroEnvio . "_ALM_JSON.zip";
@@ -1136,7 +1138,7 @@ class EmpresaController extends Controller
                         $estadoFile = 2;
 
                         if ($unidad === 'litros') {
-                            $archivosPrevios = Archivo::where('balance_id', $balance->id_balance)->get();
+                            $archivosPrevios = Archivo::where('balance_id', $balance->id)->get();
                             $estadoFile = 1;
                             foreach ($archivosPrevios as $archivoInBD) {
                                 $archivoInBD->estado = 2;
@@ -1149,8 +1151,7 @@ class EmpresaController extends Controller
                         $archivo->ruta = Storage::url($zipFolder) . $fileNameZip;
                         $archivo->tipo = 'j';
                         $archivo->usuario_id = $request->user()->id;
-                        $archivo->balance_id = $balance->id_balance;
-                        $archivo->empresa_id = $empresa->id;
+                        $archivo->balance_id = $balance->id;
                         $archivo->estado = $estadoFile;
                         $archivo->save();
                         $archivo->load('usuario');
@@ -1158,7 +1159,7 @@ class EmpresaController extends Controller
                         $bitacora = new Bitacora();
                         $bitacora->fecha = date('Y-m-d');
                         $bitacora->fecha_hora = date('Y-m-d H:i:s');
-                        $bitacora->tipoevento_id = 1;
+                        $bitacora->evento_id = 1;
                         $bitacora->descripcion1 = 'El usuario ' . $request->user()->usuario;
                         $bitacora->descripcion2 = 'generó el reporte excel ' . $archivo->id . ' del día ' . $balance->fecha;
                         $bitacora->descripcion3 = '';
