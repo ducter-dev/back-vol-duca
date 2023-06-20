@@ -36,4 +36,19 @@ class Empresa extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function productos()
+    {
+        return $this->belongsToMany(Producto::class, 'productos_empresas', 'producto_id', '');
+    }
+
+    public function productoOmision()
+    {
+        return $this->belongsTo(Producto::class, 'producto_omision');
+    }
+
+    public function balances()
+    {
+        return $this->hasMany(Balance::class);
+    }
 }

@@ -20,8 +20,10 @@ use \App\Http\Controllers\UserController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+Route::post('json/v3/empresas/{idEmpresa}/fecha/{fecha}/json/{tipo}/unidad/{unidad}', [EmpresaController::class, 'crearJsonV1'])->middleware('auth:sanctum');
 /* Route::resource('empresas', EmpresaController::class)->middleware(['auth:api', 'admin']); */
-Route::resource('empresas', EmpresaController::class)->middleware(['auth:api']);
+Route::resource('empresas', EmpresaController::class)->middleware(['auth:sanctum']);
 
 Route::group([
     'prefix' => 'users'

@@ -10,7 +10,7 @@ class Balance extends Model
 {
     use HasFactory;
 
-    protected $connection = 'mysql2';
+    protected $table = 'balances_duca.balances';
 
     protected $fillable = [
         'fecha',
@@ -18,5 +18,27 @@ class Balance extends Model
         'salidas',
         'inventarioInicial',
     ];
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
+    }
+
+    public function dictamenes()
+    {
+        return $this->hasMany(Dictamen::class);
+    }
+
+    public function archivos() {
+        return $this->hasMany(Archivo::class);
+    }
+
+    public function densidad() {
+        return $this->hasOne(Densidad::class);
+    }
+
+    public function recibos() {
+        return $this->hasMany(Recibo::class);
+    }
     
 }

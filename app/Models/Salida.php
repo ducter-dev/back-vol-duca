@@ -9,7 +9,7 @@ class Salida extends Model
 {
     use HasFactory;
 
-    protected $connection = 'mysql2';
+    protected $table = 'balances_duca.salidas';
 
     protected $fillable = [
         'balance_id',
@@ -21,4 +21,15 @@ class Salida extends Model
         'llenadera',
         'cliente'
     ];
+
+    public function dictamen()
+    {
+        return $this->hasOne(Dictamen::class, 'id', 'dictamen_id');
+    }
+
+    public function compania()
+    {
+        return $this->belongsTo(Cliente::class, 'cliente', 'id');
+    }
+
 }
