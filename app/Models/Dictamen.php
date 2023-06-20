@@ -33,4 +33,13 @@ class Dictamen extends Model
     {
         return $this->hasOne(Balance::class, 'id', 'balance_id');
     }
+
+    public function recibos() {
+        return $this->hasMany(Recibo::class);
+    }
+    
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
+    }
 }

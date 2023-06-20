@@ -71,6 +71,7 @@ class ObtenerSalidas extends Command
                     $salida->llenadera = $item->llenadera_llenado;
                     $salida->pg = $item->pg;
                     $salida->cliente = $item->compania;
+                    $salida->densidad = $item->densidad;
                     $salida->save();
                     $this->info("\e[93mSe registró la salida de Gas  \e[96m$$item->pg \e[93mLlenadera \e[96m$item->llenadera_llenado \e[39m✔ \n");
     
