@@ -12,7 +12,7 @@ class Bitacora extends Model
     protected $fillable = [
         'fecha',
         'fecha_hora',
-        'tipoevento_id',
+        'evento_id',
         'descripcion1',
         'descripcion2',
         'descripcion3',

@@ -24,6 +24,6 @@ class Archivo extends Model
     }
 
     public function balance() {
-        return $this->hasOne(Balance::class, 'id_balance', 'balance_id');
+        return $this->hasOne(Balance::class, 'id', 'balance_id');
     }
 }
