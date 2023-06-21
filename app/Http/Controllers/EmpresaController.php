@@ -445,7 +445,7 @@ class EmpresaController extends Controller
                 $sumaDocumentosRecepcion = 0;
 
                 /* Crear registros de entradas */
-
+                
                 if ($volRecibido > 0) {
                     $rowRecepcion = [];
                     $fechaHoraInicioRecepcionDT = new DateTime($balance->fecha . " 05:00:00", new DateTimeZone('America/Mexico_City'));
@@ -505,11 +505,10 @@ class EmpresaController extends Controller
 
                                 $dataRecepcion = [
                                     'NumeroDeRegistro' => $numRegistro,
-                                    'VolumenInicialTanque' => [
+                                    'VolumenPuntoEntrada:' => [
                                         'ValorNumerico' => round(($unidad === 'litros' ? ($inventarioInicialRec*1000) /$densidadBalance : $inventarioInicialRec),3),
                                         'UnidadDeMedida' => 'UM03'
                                     ],
-                                    'VolumenFinalTanque' => round(($unidad === 'litros' ? ((($volFinal) * 1000) / $densidadBalance) : $volFinal),3),
                                     'VolumenRecepcion' => [
                                         'ValorNumerico' => round(($unidad === 'litros' ? ($masaRec*1000) /$densidadBalance : $masaRec),3),
                                         'UnidadDeMedida' => 'UM03'
@@ -548,7 +547,8 @@ class EmpresaController extends Controller
                                 /* echo '----------------------------------------<br />'; */
                                 $indexEntrada++;
                                 /* echo "indexEntrada: $indexEntrada"; */
-                                array_push($rowRecepcion, $dataRecepcion);
+                                #array_push($rowRecepcion, $dataRecepcion);
+                                array_push($recepcionesEB00, $dataRecepcion);
                                 /*
                                 if ($limiteTanqueRec > $restanteEntradaEB00) {
                                     if ($restanteEntradaEB00 > $limiteTanqueRec) {
@@ -802,12 +802,7 @@ class EmpresaController extends Controller
 
                         }
                     }
-                    $recepcionTanque = [
-                        /* "tanque_id" => $idTanque, */
-                        "recepcion" => $rowRecepcion,
-                        "inventarioFinal" => $restanteAlmTanqueRec
-                    ];
-                    array_push($recepcionesEB00, $recepcionTanque);
+                    #array_push($recepcionesEB00, $rowRecepcion);
                 }
 
 
@@ -885,11 +880,10 @@ class EmpresaController extends Controller
                             $numRegistro = $numRegistro + 1;
                             $dataEntrega = [
                                 'NumeroDeRegistro' => $numRegistro,
-                                'VolumenInicialTanque' => [
+                                'VolumenPuntoSalida' => [
                                     'ValorNumerico' => round($this->convertLitros($unidad, $inventarioInicialSal, $salidas[$i]->densidad),3),
                                     'UnidadDeMedida' => 'UM03'
                                 ],
-                                'VolumenFinalTanque' => round($this->convertLitros($unidad, ($inventarioInicialSal - $masa), $salidas[$i]->densidad),3),
                                 'VolumenEntregado' => [
                                     'ValorNumerico' => round($this->convertLitros($unidad, $masa, $salidas[$i]->densidad),3),
                                     'UnidadDeMedida' => 'UM03'
@@ -929,74 +923,44 @@ class EmpresaController extends Controller
                             //echo "restanteSalidas  - masa -> " . $restanteSalidas . "<br />";
                             //echo "*********************************************<br/>";
                             $indexSalidas++;
-                            array_push($rowSalida, $dataEntrega);
+                            #array_push($rowSalida, $dataEntrega);
+                            array_push($salidasTotales, $dataEntrega);
                         }
+                        #array_push($salidasTotales, $rowSalida);
                     }
-                    
                 }
                 
-                $inventarioInicialConv = $this->convertLitros($unidad, $inventarioInicial, $densidadBalance);
-
                 $medidoresArray = [];
                 $medidoresRow = [
                     /* 'SistemaMedicionTanque' => $tanque->sistema_medicion,
                     'LocalizODescripSistMedicionTanque' => $tanque->localizcion_sistema_medicion,
                     'VigenciaCalibracionSistMedicionTanque' => $tanque->vigencia_calibracion_sistema_medicion,
                     'IncertidumbreMedicionSistMedicionTanque' => $tanque->incertidumbre_sistema_medicion */
-                    'SistemaMedicionTanque' => 'duda',
-                    'LocalizODescripSistMedicionTanque' => 'duda',
-                    'VigenciaCalibracionSistMedicionTanque' => 'duda',
-                    'IncertidumbreMedicionSistMedicionTanque' => 'duda'
+                    'SistemaMedicionDucto' => 'duda',
+                    'LocalizODescripSistMedicionDucto' => 'duda',
+                    'VigenciaCalibracionSistMedicionDucto' => 'duda',
+                    'CapacidadGasTalon' => [
+                        'ValorNumerico' => 0,
+                        'UnidadDeMedida' => 'UM03'
+                    ]
                 ];
                 array_push($medidoresArray, $medidoresRow);
 
-                $existenciaFinal = $inventarioInicialConv + $sumaRecepcionTanque - $sumaEntragadoCompleto;
-                $tanquesArray = [];
+                $ductoArray = [];
 
-                $dataTanque = [
-                    'ClaveIdentificacionTanque' => 'Duda',
-                    'Localizaciony/oDescripcionTanque' => 'Duda',
-                    'VigenciaCalibracionTanque' => 'Duda',
-                    'CapacidadTotalTanque' => [
+                $dataDucto = [
+                    'ClaveIdentificacionDucto' => 'Duda',
+                    'DescripcionDucto' => 'Duda',
+                    'DiametroDucto' => 'Duda',
+                    'SistemaMedicionDucto' => 'Duda',
+                    'LocalizODescripSistMedicionDucto' => 'Duda',
+                    'VigenciaCalibracionSistMedicionDucto' => 'Duda',
+                    'IncertidumbreMedicionSistMedicionDucto' => 'Duda',
+                    'CapacidadGasTalon' => [
                         'ValorNumerico' => 'Duda',
                         'UnidadDeMedida' => 'UM03'
                     ],
-                    'CapacidadOperativaTanque' => [
-                        'ValorNumerico' => 'Duda',
-                        'UnidadDeMedida' => 'UM03'
-                    ],
-                    'CapacidadUtilTanque' => [
-                        'ValorNumerico' => 'Duda',
-                        'UnidadDeMedida' => 'UM03'
-                    ],
-                    'CapacidadFondajeTanque' => [
-                        'ValorNumerico' => 'Duda',
-                        'UnidadDeMedida' => 'UM03'
-                    ],
-                    'VolumenMinimoOperacion' => [
-                        'ValorNumerico' => 'Duda',
-                        'UnidadDeMedida' => 'UM03'
-                    ],
-                    'EstadoTanque' => 'Duda',
                     'Medidores' => $medidoresArray,
-                    // Obtener las existencias
-                    
-                    'Existencias' => [
-                        'VolumenExistenciasAnterior' => round($inventarioInicialConv,3),
-                        'VolumenAcumOpsRecepcion' => [
-                            'ValorNumerico' => $sumaRecepcionTanque,
-                            'UnidadDeMedida' => 'UM03'
-                        ],
-                        'HoraRecepcionAcumulado' => $horaCorte,
-                        'VolumenAcumOpsEntrega' => [
-                            'ValorNumerico' => round($sumaEntragadoCompleto,3),
-                            'UnidadDeMedida' => 'UM03'
-                        ],
-                        'HoraEntregaAcumulado' => $horaCorte,
-                        'VolumenExistencias' => round(($inventarioInicialConv + $sumaRecepcionTanque - $sumaEntragadoCompleto),3),
-                        'FechaYHoraEstaMedicion' => $fechaHoraCorte,
-                        'FechaYHoraMedicionAnterior' => $fechaHoraCorteAnt
-                    ],
                     'Recepciones' => [
                         'TotalRecepciones' => $sumaDocumentosRecepcion,
                         'SumaVolumenRecepcion' => [
@@ -1004,6 +968,7 @@ class EmpresaController extends Controller
                             'UnidadDeMedida' => 'UM03'
                         ],
                         'TotalDocumentos' => $sumaDocumentosRecepcion,
+                        'SumaCompras' => 0,
                         'Recepcion' => $recepcionesEB00
                     ],
                     'Entregas' => [
@@ -1014,10 +979,11 @@ class EmpresaController extends Controller
                         ],
                         'TotalDocumentos' => $sumaDocumentosSalida,
                         'SumaVentas' => 0,
+                        'Entrega' => $salidasTotales
                     ]
                 ];
 
-                array_push($tanquesArray, $dataTanque);
+                array_push($ductoArray, $dataDucto);
 
                 $fechaI = date('Y-m-d', strtotime($fechaBalance."-1 days"));
                 $fechaI = $fechaI . " 05:00:00";
@@ -1034,7 +1000,7 @@ class EmpresaController extends Controller
                         "NumeroRegistro" => $numRegistro,
                         "FechaYHoraEvento" => $bitacora->fecha_hora,
                         "UsuarioResponsable" => $bitacora->user->usuario,
-                        "TipoEvento" => $bitacora->tipoEvento->id,
+                        "TipoEvento" => $bitacora->evento->id,
                         "DescripcionEvento" => $bitacora->descripcion1 . $bitacora->descripcion2 . $bitacora->descripcion3,
                     ];
                     array_push($bitacoraRegistros, $rowBitacora);
@@ -1045,7 +1011,7 @@ class EmpresaController extends Controller
                     'ClaveProducto' => $productoOmision->clave,
                     'ComposDePropanoEnGasLP' => $propano->porcentaje->porcentaje,
                     'ComposDeButanoEnGasLP' => $butano->porcentaje->porcentaje,
-                    'Tanque' => $tanquesArray
+                    'Ducto' => $ductoArray
                 ];
 
 
@@ -1178,7 +1144,7 @@ class EmpresaController extends Controller
 
                 /* if ($sumaDocumentosRecepcion > 0) { 
                     if ($sumaDocumentosSalida > 0) {
-                        $dataTanque = [
+                        $dataDucto = [
                             'ClaveIdentificacionTanque' => $tanque->clave,
                             'Localizaciony/oDescripcionTanque' => $tanque->localizacion_descripcion,
                             'VigenciaCalibracionTanque' => $tanque->vigencia_calibracion,
