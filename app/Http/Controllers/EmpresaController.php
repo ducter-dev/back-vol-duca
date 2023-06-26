@@ -284,13 +284,17 @@ class EmpresaController extends Controller
                 $this->error("No se han creado dictámenes para el día " . $fechaBalance);
             }
 
+
+            $recepcionGas = DB::table('balances_duca.entradas')
+                ->select(DB::raw('MAX(valor) - MIN(valor) AS recibido'))
+                ->whereRaw('balance_id = ?', [$balance->id])
+                ->first();
+            $volRecibido = is_null($recepcionGas->recibido) ? 0 : $recepcionGas->recibido;
+
+
             if (count($dictamenes) == 2) {
 
-                $recepcionGas = DB::table('balances_duca.entradas')
-                    ->select(DB::raw('MAX(valor) - MIN(valor) AS recibido'))
-                    ->whereRaw('balance_id = ?', [$balance->id])
-                    ->first();
-                $volRecibido = is_null($recepcionGas->recibido) ? 0 : $recepcionGas->recibido;
+                
                 foreach ($dictamenes as $dic) {
                     $dic->load('cliente');
                 }
@@ -323,14 +327,9 @@ class EmpresaController extends Controller
 
                 $folioDictamen = $dictamenSel->rfcDictamen . $numFolioDictamen . $fechaFolioDictamen;
 
-                $recepcionGas = DB::table('balances_duca.entradas')
-                    ->select(DB::raw('MAX(valor) - MIN(valor) AS recibido'))
-                    ->whereRaw('balance_id = ?', [$balance->id])
-                    ->first();
+                
 
                 # Checar la cantidad de gas recibido  
-                #$volRecibido = is_null($recepcionGas->recibido) ? 0 : $recepcionGas->recibido;
-                $volRecibido = is_null($totalVentasIrge) ? 0 : $totalVentasIrge;
 
                 $entregaLlenadera = DB::table('balances_duca.salidas')
                     ->select(DB::raw('SUM(valor) AS recibido'))
@@ -814,6 +813,7 @@ class EmpresaController extends Controller
                 #dd($salidas);
                 
                 $totalSalidasEntregas = 0;
+                
                 foreach ($salidas as $salida) {
                     #dd($salida);
                     $totalSalidasEntregas = $totalSalidasEntregas + floatval($salida['valor']);
@@ -874,7 +874,7 @@ class EmpresaController extends Controller
                             $fecha_hora_inicio =  $fecha_hora_inicioDT->format(DateTime::ATOM);
                             $fecha_hora_finDT = new DateTime($fecha_hora_fin, new DateTimeZone('America/Mexico_City'));
                             $fecha_hora_fin =  $fecha_hora_finDT->format(DateTime::ATOM);
-
+                            
                             # Logica de las Salidas
                             $masa = $masaSalida;
                             $numRegistro = $numRegistro + 1;
