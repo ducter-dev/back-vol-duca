@@ -51,10 +51,10 @@ Artisan::command('creaBalanceDiario', function() {
 });
 
 Artisan::command('crearBalancesMes', function () {
-    $days = [1,2,3,4,5,6,7,8,9,10,11,12];
+    $days = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31];
     
     foreach ($days as $day) {
-        $fecha = Carbon::createFromDate(2023,6, $day);
+        $fecha = Carbon::createFromDate(2022,1, $day);
 
         $balance = Balance::where('fecha', $fecha)->first();
 
@@ -117,9 +117,9 @@ Artisan::command('obtenerEntradasMes', function () {
     
     $balanceTPA = 0;
 
-    $days = [1,2,3,4,5,6,7,8,9,10,11,12];
+    $days = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31];
     foreach ($days as $day) {
-        $fecha = Carbon::createFromDate(2023,6, $day);    
+        $fecha = Carbon::createFromDate(2022,1, $day);
         $fecha = $fecha->format('Y-m-d');
         $balance = Balance::where('fecha', $fecha)->first();
 
@@ -165,9 +165,9 @@ Artisan::command('obtenersalidasMes', function () {
     
     $balanceTPA = 0;
 
-    $days = [1,2,3,4,5,6,7,8,9,10,11,12];
+    $days = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31];
     foreach ($days as $day) {
-        $fecha = Carbon::createFromDate(2023,6, $day);    
+        $fecha = Carbon::createFromDate(2022,1, $day);    
         $fecha = $fecha->format('Y-m-d');
         $balance = Balance::where('fecha', $fecha)->first();
 
@@ -208,6 +208,7 @@ Artisan::command('obtenersalidasMes', function () {
                 $salida->llenadera = $item->llenadera_llenado;
                 $salida->pg = $item->pg;
                 $salida->cliente = $item->compania;
+                $salida->densidad = $item->densidad;
                 $salida->save();
                 echo "\e[93mSe registró la salida de Gas id: \e[96m$salida->id, \e[93mPG: \e[96m$item->pg \e[93m en Llenadera \e[96m$item->llenadera_llenado \e[39m✔ \n";
 
