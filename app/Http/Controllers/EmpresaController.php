@@ -11,6 +11,7 @@ use App\Models\Dictamen;
 use App\Models\Entrada;
 use App\Models\Salida;
 use App\Models\Archivo;
+use App\Models\Recibo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Traits\ApiResponder;
@@ -293,11 +294,127 @@ class EmpresaController extends Controller
 
 
             if (count($dictamenes) == 2) {
-
+                /* Listar los dictámenes */
                 
+                $recibos = Recibo::where('balance_id', $balance->id_balance)->get();
+                $recibos->load('dictamen');
+
+                $recibosGas = [];
+                $numEntregas = 0;
+                $sumaEntregas = 0;
+                $numeroRecibosInDictamenes = 0;
+
                 foreach ($dictamenes as $dic) {
-                    $dic->load('cliente');
+                    $dic->load('recibos');
+                    $numeroRecibosInDictamenes = $numeroRecibosInDictamenes + count($dic->recibos);
                 }
+
+                foreach ($dictamenes as $dic) {
+                    $dic->load('recibos');
+                    $dic->load('cliente');
+
+                    $numFolioDictamenRec = '0';
+                    switch (true) {
+                        case $dic->id < 10:
+                            $numFolioDictamenRec = "0000".$dic->id;
+                            break;
+                        case $dic->id >= 10 && $dic->id < 100:
+                            $numFolioDictamenRec = "000".$dic->id;
+                            break;
+                        case $dic->id >= 100 && $dic->id < 1000:
+                            $numFolioDictamenRec = "00".$dic->id;
+                            break;
+                        case $dic->id >= 1000 && $dic->id < 10000:
+                            $numFolioDictamenRec = "0".$dictamenes->id;
+                            break;
+                    }
+                    $folioDictamenRec = $dic->rfcDictamen . $numFolioDictamenRec . $fechaFolioDictamen;
+                    //dd($folioDictamenRec);
+                    //echo '******************************<br />';
+                    //echo 'dictamen => ' . $dic->id . '<br />';
+                    //echo 'balance => ' . $balance->id_balance . '<br />';
+                    //echo 'volRecibido => ' . $volRecibido . '<br />';
+                    $numRecibos = count($dic->recibos);
+                    //echo 'num rec => ' . $numRecibos . '<br />';
+                    $reciboTot = 0;
+                    if ($numRecibos > 0 ) {
+                        $recibos = $dic->recibos;
+                        foreach ($recibos as $rec) {
+                            //echo 'recibo => ' . $rec . '<br />';
+                            $numEntregas++;
+                            if ($numEntregas > 1) {
+                                if ($numEntregas === $numeroRecibosInDictamenes) {
+                                    //echo 'Num Entregas => ' . $numEntregas . ' de ' . $numeroRecibosInDictamenes . '<br />';
+                                    //echo 'Suma entregas => ' . $sumaEntregas . '<br />';
+                                    //echo 'recibo => ' . $rec->recibo . '<br />';
+                                    if ($sumaEntregas > 0) {
+                                        $reciboTot = $volRecibido - $sumaEntregas;
+                                    } else {
+                                        $reciboTot = $volRecibido;
+                                    }
+                                    //echo 'reciboTotal => ' . $reciboTot . '<br />';
+                                    //echo '=================================<br />';
+                                } else {
+                                    //echo 'numEntregas => ' . $numEntregas . '<br />';
+                                    //echo 'suma entregas => ' . $sumaEntregas . '<br />';
+                                    $reciboTot = $rec->recibo;
+                                    //echo 'reciboTotal => ' . $reciboTot . '<br />';
+                                    //echo '------------------------------<br />';
+                                }
+                            } else {
+                                if ($numEntregas === $numeroRecibosInDictamenes) {
+                                    //echo 'Num Entregas => ' . $numEntregas . ' de ' . $numeroRecibosInDictamenes . '<br />';
+                                    //echo 'Suma entregas => ' . $sumaEntregas . '<br />';
+                                    $reciboTot = $volRecibido - $sumaEntregas;
+                                    //echo 'reciboTotal => ' . $reciboTot . '<br />';
+                                    //echo '=================================<br />';
+
+                                } else {
+                                    $reciboTot = $rec->recibo;
+                                    //echo 'numEntregas => ' . $numEntregas . ' de ' . $numeroRecibosInDictamenes . '<br />';
+                                    //echo 'suma entregas => ' . $sumaEntregas . '<br />';
+                                    //echo 'reciboTot => ' . $reciboTot . '<br />';
+                                    //echo '------------------------------<br />';
+
+                                }
+                            }
+                            $sumaEntregas = $sumaEntregas + $reciboTot;
+    
+                            $obj = [
+                                'recibo' => $reciboTot,
+                                'dictamen' => $dic,
+                                'dictamen_id' => $dic->id,
+                                'dictamen_folio' => $folioDictamenRec,
+                                'entrada' => $numEntregas,
+                                'cliente' => $dic->cliente,
+                                'cliente_id' => $dic->cliente->id,
+                            ];
+                            array_push($recibosGas, $obj);
+                        }
+                    }
+
+                }
+                
+                /* Checar la cantidad de gas recibido */
+
+                $entregaLlenadera = DB::table('balances_duca.salidas')
+                    ->select(DB::raw('SUM(valor) AS recibido'))
+                    ->whereRaw("balance_id = ? AND tipo = ?", [$balance->id,'l'])
+                    ->first();
+
+                $volEntregadoLlenadera = is_null($entregaLlenadera->recibido) ? 0 : $entregaLlenadera->recibido;
+                #dd($volEntregadoLlenadera);
+                $volEntregado = $volEntregadoLlenadera;
+
+                $restanteEntradaEB00 = 0;
+                $totalEntradaEB00 = 0;
+
+                $entradas = [];
+                $totalEntradasEB00 = 0; // $totalEntradasEntregas
+                $inventarioInicial = 0;
+
+
+
             } else {
                 $dictamenes->load('cliente');
                 $dictamenes->load('recibos');
@@ -327,9 +444,7 @@ class EmpresaController extends Controller
 
                 $folioDictamen = $dictamenSel->rfcDictamen . $numFolioDictamen . $fechaFolioDictamen;
 
-                
-
-                # Checar la cantidad de gas recibido  
+                /* Checar la cantidad de gas recibido */
 
                 $entregaLlenadera = DB::table('balances_duca.salidas')
                     ->select(DB::raw('SUM(valor) AS recibido'))
@@ -339,8 +454,13 @@ class EmpresaController extends Controller
 
                 $balance->load('recibos');
                 $numRecibos = count($balance->recibos);
+#                dd($numRecibos);
 
                 $reciboTot = 0;
+                $volEntregadoLlenadera = is_null($entregaLlenadera->recibido) ? 0 : $entregaLlenadera->recibido;
+                #dd($volEntregadoLlenadera);
+                $volEntregado = $volEntregadoLlenadera;
+
                 if ($numRecibos > 0 ) {
                     $recibos = $balance->recibos;
                     foreach ($recibos as $rec) {
@@ -399,12 +519,8 @@ class EmpresaController extends Controller
                         array_push($recibosGas, $obj);
                     }
                 }
-
-                # Checar la cantidad de gas recibido  
-                $volEntregadoLlenadera = is_null($entregaLlenadera->recibido) ? 0 : $entregaLlenadera->recibido;
-                #dd($volEntregadoLlenadera);
-                $volEntregado = $volEntregadoLlenadera;
-
+                # Checar la cantidad de gas recibido
+                
                 $restanteEntradaEB00 = 0;
                 $totalEntradaEB00 = 0;
 
@@ -413,23 +529,51 @@ class EmpresaController extends Controller
                 $inventarioInicial = 0;
 
                 /* Obtener las recepciones */
-                foreach ($clientesVentas as $clienteDespacho) {
-                    $entradaDucto = [
-                        "balance_id" => $balance->id,
-                        "fecha_hora_inicio" => $fechaHoraCorteAnt,
-                        "fecha_hora_fin" => $fechaHoraCorte,
-                        'valor' => ($volRecibido * $clienteDespacho['porcentaje']) / 100,
-                        'tipo' => 'd',
-                        'cliente' => $clienteDespacho['cliente'],
-                        'compania' => $clienteDespacho,
-                        'dictamen' => $dictamenSel
-                    ];
-                    array_push($entradas, $entradaDucto);
-                }
 
+                foreach ($recibosGas as $recibo) {}
+
+
+                if (count($recibosGas) > 0)
+                {
+                    foreach ($recibosGas as $entrada) {
+                        $totalEntradasEB00 = $totalEntradasEB00 + floatval($entrada['recibo']);
+                        foreach ($clientesVentas as $clienteDespacho) {
+                            $entradaDucto = [
+                                "balance_id" => $balance->id,
+                                "fecha_hora_inicio" => $fechaHoraCorteAnt,
+                                "fecha_hora_fin" => $fechaHoraCorte,
+                                'valor' => (floatval($entrada['recibo'] * $clienteDespacho['porcentaje'])) / 100,
+                                'tipo' => 'd',
+                                'cliente' => $clienteDespacho['cliente'],
+                                'compania' => $clienteDespacho,
+                                'dictamen' => $dictamenSel
+                            ];
+                            array_push($entradas, $entradaDucto);
+                        }    
+                    }
+                } else {
+                    foreach ($clientesVentas as $clienteDespacho) {
+                        $entradaDucto = [
+                            "balance_id" => $balance->id,
+                            "fecha_hora_inicio" => $fechaHoraCorteAnt,
+                            "fecha_hora_fin" => $fechaHoraCorte,
+                            'valor' => ($volRecibido * $clienteDespacho['porcentaje']) / 100,
+                            'tipo' => 'd',
+                            'cliente' => $clienteDespacho['cliente'],
+                            'compania' => $clienteDespacho,
+                            'dictamen' => $dictamenSel
+                        ];
+                        array_push($entradas, $entradaDucto);
+                    }
+
+                }
+                
                 foreach ($entradas as $entrada) {
                     $totalEntradasEB00 = $totalEntradasEB00 + floatval($entrada['valor']);
                 }
+
+                dd($entradas);
+                dd($totalEntradasEB00);
 
                 #dd($totalEntradasEB00);
                 /** 
