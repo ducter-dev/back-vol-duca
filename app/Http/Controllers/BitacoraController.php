@@ -2,84 +2,44 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\BitacoraResource;
 use App\Models\Bitacora;
+use App\Traits\ApiResponder;
 use Illuminate\Http\Request;
 
 class BitacoraController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
+    use ApiResponder;
+
     public function index()
     {
-        //
+        $bitacoras = Bitacora::paginate(20);
+        $bitacoras->load('usuario');
+        $bitacoras->load('evento');
+        $bitacoras = BitacoraResource::collection($bitacoras)->additional([
+            'status' => 'success',
+            "message" => 'Información consultada correctamente.',
+        ]);
+        
+        return $bitacoras;
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
+    public function destroy($id_bitacora, Request $request)
     {
-        //
-    }
+        try {
+            $bitacora = Bitacora::where('id', $id_bitacora)->first();
+            $bitacora->delete();
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Bitacora  $bitacora
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Bitacora $bitacora)
-    {
-        //
-    }
+            $resource = new BitacoraResource($bitacora);
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Bitacora  $bitacora
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Bitacora $bitacora)
-    {
-        //
-    }
+            return $this->success('Registro borrado correctamente.', [
+                'archivo' => $resource
+            ]);
+            
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Bitacora  $bitacora
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, Bitacora $bitacora)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Bitacora  $bitacora
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Bitacora $bitacora)
-    {
-        //
+        } catch (\Throwable $th) {
+            return $this->error("Error al crear archivo, error:{$th->getMessage()}.");
+        }
     }
 }
