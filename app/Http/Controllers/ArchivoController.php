@@ -17,7 +17,6 @@ class ArchivoController extends Controller
         $archivos = Archivo::orderBy('balance_id', 'asc')->orderBy('estado', 'asc')->orderBy('id', 'asc')->paginate(15);
         $archivos->load('usuario');
         $archivos->load('balance');
-        
         $archivos = ArchivoResource::collection($archivos)->additional([
             'status' => 'success',
             "message" => 'Información consultada correctamente.',
@@ -89,7 +88,7 @@ class ArchivoController extends Controller
             ]);
 
         } catch (\Throwable $th) {
-            return response()->json($th->getMessage(), 501);
+            return $this->error("Error al crear archivo, error:{$th->getMessage()}.");
         }
     }
 }

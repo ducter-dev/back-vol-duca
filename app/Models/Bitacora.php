@@ -19,13 +19,13 @@ class Bitacora extends Model
         'usuario_id',
     ];
 
-    public function user()
+    public function usuario()
     {
-        return $this->belongsTo(User::class, 'usuario_id');
+        return $this->belongsTo(User::class, 'usuario_id', 'id');
     }
 
     public function evento()
     {
-        return $this->belongsTo(Evento::class, 'evento_id');
+        return $this->belongsTo(Evento::class, 'evento_id', 'id');
     }
 }
