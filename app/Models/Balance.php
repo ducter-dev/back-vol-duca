@@ -19,18 +19,13 @@ class Balance extends Model
         'inventarioInicial',
     ];
 
-    public function empresa()
-    {
-        return $this->belongsTo(Empresa::class);
-    }
-
     public function dictamenes()
     {
         return $this->hasMany(Dictamen::class);
     }
 
     public function archivos() {
-        return $this->hasMany(Archivo::class);
+        return $this->hasMany(Archivo::class, 'balance_id', 'id');
     }
 
     public function densidad() {

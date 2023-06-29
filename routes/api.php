@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\ArchivoController;
 use \App\Http\Controllers\EmpresaController;
 use \App\Http\Controllers\UserController;
 
@@ -24,6 +25,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post('json/v3/empresas/{idEmpresa}/fecha/{fecha}/json/{tipo}/unidad/{unidad}', [EmpresaController::class, 'crearJsonV1'])->middleware('auth:sanctum');
 /* Route::resource('empresas', EmpresaController::class)->middleware(['auth:api', 'admin']); */
 Route::resource('empresas', EmpresaController::class)->middleware(['auth:sanctum']);
+Route::resource('archivos', ArchivoController::class)->middleware(['auth:sanctum']);
 
 Route::group([
     'prefix' => 'users'
