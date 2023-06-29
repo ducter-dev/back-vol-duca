@@ -2,10 +2,9 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class UserResource extends JsonResource
+class BalanceResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -17,11 +16,14 @@ class UserResource extends JsonResource
     {
         $data = [
             'id' => $this->id,
-            'nombre' => $this->nombre,
-            'usuario' => $this->usuario,
-            'correo' => $this->correo,
-            'creado' => $this->creado->format('Y-m-d H:i:s'),
+            'fecha' => $this->fecha,
+            'entradas' => $this->entradas,
+            'salidas' => $this->salidas,
+            'inventarioInicial' => $this->inventarioInicial,
+            'creado' => $this->created_at->format('Y-m-d H:i:s'),
+            'actualizado' => $this->updated_at->format('Y-m-d H:i:s'),
         ];
+
         return $data;
     }
 }

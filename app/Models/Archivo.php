@@ -20,10 +20,10 @@ class Archivo extends Model
 
     
     public function usuario() {
-        return $this->belongsTo(User::class, 'usuario_id');
+        return $this->belongsTo(User::class, 'usuario_id', 'id');
     }
 
     public function balance() {
-        return $this->hasOne(Balance::class, 'id', 'balance_id');
+        return $this->belongsTo(Balance::class, 'balance_id', 'id');
     }
 }
