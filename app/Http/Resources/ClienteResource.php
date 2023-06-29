@@ -4,7 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class BitacoraResource extends JsonResource
+class ClienteResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,15 +16,8 @@ class BitacoraResource extends JsonResource
     {
         $data = [
             'id' => $this->id,
-            'fecha' => $this->fecha->format('Y-m-d'),
-            'fecha_hora' => $this->fecha_hora->format('Y-m-d H:i:s'),
-            'evento_id' => $this->evento_id,
-            'evento' => new EventoResource($this->evento),
-            'descripcion1' => $this->descripcion1,
-            'descripcion2' => $this->descripcion2,
-            'descripcion3' => $this->descripcion3,
-            'usuario_id' => $this->usuario_id,
-            'usuario' => new UserResource($this->usuario),
+            'rfcCliente' => $this->rfcCliente,
+            'nombreCliente' => $this->nombreCliente,
             'creado' => $this->created_at->format('Y-m-d H:i:s'),
             'actualizado' => $this->updated_at->format('Y-m-d H:i:s'),
         ];
