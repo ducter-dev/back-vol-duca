@@ -112,6 +112,11 @@ class ClienteController extends Controller
             }
 
             $cliente = Cliente::where('id', $id_cliente)->first();
+
+            if ($cliente == NULL)
+            {
+                return $this->error("Error, NO se encontró el registro.");
+            }
             $cliente->rfcCliente = $request->rfcCliente;
             $cliente->nombreCliente = $request->nombreCliente;
             $cliente->save();
