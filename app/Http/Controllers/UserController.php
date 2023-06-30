@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\UserResource;
 use App\Http\Requests\AuthenticatedSessionRequest;
+use App\Http\Resources\AuthResource;
 use App\Traits\ApiResponder;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -200,7 +201,7 @@ class UserController extends Controller
     
                 event(new LoginEvent($user));
     
-                $resource = new UserResource($user);
+                $resource = new AuthResource($user);
                 return $this->success('Inicio de sesión exitoso.', [
                     'user' => $resource
                 ]);

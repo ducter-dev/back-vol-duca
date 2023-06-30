@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ArchivoController;
 use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\CompuestoController;
 use \App\Http\Controllers\EmpresaController;
 use \App\Http\Controllers\UserController;
 
@@ -30,6 +31,7 @@ Route::resource('empresas', EmpresaController::class)->middleware(['auth:sanctum
 Route::resource('archivos', ArchivoController::class)->middleware(['auth:sanctum']);
 Route::resource('bitacora', BitacoraController::class)->middleware(['auth:sanctum']);
 Route::resource('clientes', ClienteController::class)->middleware(['auth:sanctum']);
+Route::resource('compuestos', CompuestoController::class)->middleware(['auth:sanctum']);
 
 Route::group([
     'prefix' => 'users'
