@@ -179,7 +179,7 @@ class DensidadController extends Controller
             ]);
 
         } catch (\Throwable $th) {
-            return response()->json($th->getMessage(), 501);
+            return $this->error("Error al eliminar el registro, error:{$th->getMessage()}.");
         }
     }
 }
