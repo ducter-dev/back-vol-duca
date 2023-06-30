@@ -21,6 +21,7 @@ class Dictamen extends Model
         'densidad',
         'volumen',
         'cliente_id',
+        'rutaDictamen',
         'balance_id',
     ];
 
@@ -36,10 +37,5 @@ class Dictamen extends Model
 
     public function recibos() {
         return $this->hasMany(Recibo::class);
-    }
-    
-    public function empresa()
-    {
-        return $this->belongsTo(Empresa::class);
     }
 }
