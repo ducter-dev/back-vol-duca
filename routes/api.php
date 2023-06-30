@@ -7,6 +7,7 @@ use App\Http\Controllers\ArchivoController;
 use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\CompuestoController;
+use App\Http\Controllers\DensidadController;
 use \App\Http\Controllers\EmpresaController;
 use \App\Http\Controllers\UserController;
 
@@ -32,6 +33,7 @@ Route::resource('archivos', ArchivoController::class)->middleware(['auth:sanctum
 Route::resource('bitacora', BitacoraController::class)->middleware(['auth:sanctum']);
 Route::resource('clientes', ClienteController::class)->middleware(['auth:sanctum']);
 Route::resource('compuestos', CompuestoController::class)->middleware(['auth:sanctum']);
+Route::resource('densidades', DensidadController::class)->middleware(['auth:sanctum']);
 
 Route::group([
     'prefix' => 'users'
