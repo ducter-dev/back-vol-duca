@@ -86,7 +86,7 @@ class EventoController extends Controller
             ]);
 
         } catch (\Throwable $th) {
-            return response()->json($th->getMessage(), 501);
+            return $this->error("Error al mostrar el registro, error:{$th->getMessage()}.");
         }
     }
 
