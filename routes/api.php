@@ -12,6 +12,7 @@ use App\Http\Controllers\DictamenController;
 use \App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\RolController;
 use \App\Http\Controllers\UserController;
 
 /*
@@ -40,6 +41,7 @@ Route::resource('densidades', DensidadController::class)->middleware(['auth:sanc
 Route::resource('dictamenes', DictamenController::class)->middleware(['auth:sanctum']);
 Route::resource('eventos', EventoController::class)->middleware(['auth:sanctum']);
 Route::resource('productos', ProductoController::class)->middleware(['auth:sanctum']);
+Route::resource('roles', RolController::class)->middleware(['auth:sanctum']);
 
 Route::group([
     'prefix' => 'users'
