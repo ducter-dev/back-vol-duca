@@ -18,7 +18,6 @@ class EmpresaResource extends JsonResource
             'id' => $this->id,
             'descripcion' => $this->descripcion,
             'version' => $this->version,
-            'correo' => $this->correo,
             'rfc_contribuyente' => $this->rfc_contribuyente,
             'rfc_representante' => $this->rfc_representante,
             'proveedor' => $this->proveedor,
