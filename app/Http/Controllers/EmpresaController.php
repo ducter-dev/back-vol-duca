@@ -68,17 +68,20 @@ class EmpresaController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response(['errors' => $validator->errors()->all()], 422);
+                $errors = $validator->errors()->all();
+                return $this->error("Error al actualizar el registro", $errors);
             }
             
             $empresa = new Empresa($request->all());
             $empresa->save();
 
-            return response()->json([
-                'data' => $empresa
-            ],201);
+            $resource = new EmpresaResource($empresa);
+
+            return $this->success('Empresa registrada correctamente.', [
+                'empresa' => $resource
+            ]);
         } catch (\Throwable $th) {
-            return response()->json($th->getMessage(), 501);
+            return $this->error("Error al registrar el registro, error:{$th->getMessage()}.");
         }
     }
 
@@ -89,19 +92,17 @@ class EmpresaController extends Controller
 
             if ($empresa == NULL)
             {
-                return response()->json([
-                    'data' => 'No se encontró la empresa seleccionada.'
-                ],202);
+                return $this->error("Error, NO se encontró el registro.");
             }
-            $empresa->load('tanques');
-            $empresa->load('productos');
 
-            return response()->json([
-                'data' => $empresa
-            ],202);
+            $resource = new EmpresaResource($empresa);
+
+            return $this->success('Información consultada correctamente.', [
+                'empresa' => $resource
+            ]);
 
         } catch (\Throwable $th) {
-            return response()->json($th->getMessage(), 501);
+            return $this->error("Error al mostrar el registro, error:{$th->getMessage()}.");
         }
     }
 
@@ -137,15 +138,14 @@ class EmpresaController extends Controller
             ]);
             
             if ($validator->fails()) {
-                return response(['errors' => $validator->errors()->all()], 422);
+                $errors = $validator->errors()->all();
+                return $this->error("Error al actualizar el registro", $errors);
             }
 
             $empresa = Empresa::where('id', $idEmpresa)->first();
             if ($empresa == NULL)
             {
-                return response()->json([
-                    'data' => 'No se encontró la empresa seleccionada.'
-                ],202);
+                return $this->error("Error, NO se encontró el registro.");
             }
             $empresa->version = $request->version;
             $empresa->descripcion = $request->descripcion;
@@ -171,12 +171,24 @@ class EmpresaController extends Controller
                 $cambios .= $key . ' - ' . $value . ' | ';
             }
 
-            return response()->json([
-                'data' => $empresa
-            ],202);
+            $bitacora = new Bitacora();
+            $bitacora->fecha = date('Y-m-d');
+            $bitacora->fecha_hora = date('Y-m-d H:i:s');
+            $bitacora->evento_id = 1;
+            $bitacora->descripcion1 = 'El usuario ' . $request->user()->usuario;
+            $bitacora->descripcion2 = 'modificó la empresa ' . $empresa->id;
+            $bitacora->descripcion3 = $cambios;
+            $bitacora->usuario_id = $request->user()->id;
+            $bitacora->save();
+
+            $resource = new EmpresaResource($empresa);
+
+            return $this->success('Registro actualizado correctamente.', [
+                'empresa' => $resource
+            ]);
 
         } catch (\Throwable $th) {
-            return response()->json($th->getMessage(), 501);
+            return $this->error("Error al actualizar el registro, error:{$th->getMessage()}.");
         }
     }
 
@@ -184,14 +196,23 @@ class EmpresaController extends Controller
     {
         try {
             $empresa = Empresa::where('id', $idEmpresa)->first();
+
+            if ($empresa == NULL)
+            {
+                return $this->error("Error, NO se encontró el registro.");
+            }
+
             $empresa->delete();
 
-            return response()->json([
-                'data' => $empresa
-            ],202);
+            $resource = new EmpresaResource($empresa);
+
+            return $this->success('Registro borrado correctamente.', [
+                'empresa' => $resource
+            ]);
+
             
         } catch (\Throwable $th) {
-            return response()->json($th->getMessage(), 501);
+            return $this->error("Error al eliminar el registro, error:{$th->getMessage()}.");
         }
     }
 
