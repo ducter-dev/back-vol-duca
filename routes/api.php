@@ -11,6 +11,7 @@ use App\Http\Controllers\DensidadController;
 use App\Http\Controllers\DictamenController;
 use \App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EventoController;
+use App\Http\Controllers\PermisoController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\RolController;
 use \App\Http\Controllers\UserController;
@@ -31,6 +32,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::post('json/v3/empresas/{idEmpresa}/fecha/{fecha}/json/{tipo}/unidad/{unidad}', [EmpresaController::class, 'crearJsonV1'])->middleware('auth:sanctum');
+Route::post('restore/roles/{role}', [RolController::class, 'restoreRol'])->middleware(['auth:sanctum']);
 /* Route::resource('empresas', EmpresaController::class)->middleware(['auth:api', 'admin']); */
 Route::resource('empresas', EmpresaController::class)->middleware(['auth:sanctum']);
 Route::resource('archivos', ArchivoController::class)->middleware(['auth:sanctum']);
@@ -42,6 +44,7 @@ Route::resource('dictamenes', DictamenController::class)->middleware(['auth:sanc
 Route::resource('eventos', EventoController::class)->middleware(['auth:sanctum']);
 Route::resource('productos', ProductoController::class)->middleware(['auth:sanctum']);
 Route::resource('roles', RolController::class)->middleware(['auth:sanctum']);
+Route::resource('permisos', PermisoController::class)->middleware(['auth:sanctum']);
 
 Route::group([
     'prefix' => 'users'
