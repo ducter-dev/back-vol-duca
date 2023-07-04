@@ -13,6 +13,7 @@ use \App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\PermisoController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\RevisionController;
 use App\Http\Controllers\RolController;
 use \App\Http\Controllers\UserController;
 
@@ -45,6 +46,7 @@ Route::resource('eventos', EventoController::class)->middleware(['auth:sanctum']
 Route::resource('productos', ProductoController::class)->middleware(['auth:sanctum']);
 Route::resource('roles', RolController::class)->middleware(['auth:sanctum']);
 Route::resource('permisos', PermisoController::class)->middleware(['auth:sanctum']);
+Route::resource('revisiones', RevisionController::class)->middleware(['auth:sanctum']);
 
 Route::group([
     'prefix' => 'users'
