@@ -42,7 +42,8 @@ class ProductoController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response(['errors' => $validator->errors()->all()], 422);
+                $errors = $validator->errors()->all();
+                return $this->error("Error al actualizar el registro", $errors);
             }
 
             $producto = new Producto($request->all());
@@ -149,6 +150,10 @@ class ProductoController extends Controller
     {
         try {
             $producto = Producto::where('id', $id_producto)->first();
+            if ($producto == NULL)
+            {
+                return $this->error("Error, NO se encontró el registro.");
+            }
             $producto->delete();
 
             $bitacora = new Bitacora();

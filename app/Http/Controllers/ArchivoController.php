@@ -62,10 +62,17 @@ class ArchivoController extends Controller
         try {
             $archivo = Archivo::where('id', $id_archivo)->first();
 
+            if ($archivo == NULL)
+            {
+                return $this->error("Error, NO se encontró el registro.");
+            }
+
             if ($archivo->estado == 1)
             {
                 return $this->error("No se puede borrar el archivo actual.");
             }
+
+            
 
             $archivo->delete();
             $archivo->load('usuario');

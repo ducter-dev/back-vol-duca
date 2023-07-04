@@ -23,6 +23,7 @@ return new class extends Migration
             $table->rememberToken();
             $table->timestamp('creado');
             $table->timestamp('actualizado');
+            $table->softDeletes();
         });
     }
 

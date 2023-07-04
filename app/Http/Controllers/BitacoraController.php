@@ -87,6 +87,10 @@ class BitacoraController extends Controller
     {
         try {
             $bitacora = Bitacora::where('id', $id_bitacora)->first();
+            if ($bitacora == NULL)
+            {
+                return $this->error("Error, NO se encontró el registro.");
+            }
             $bitacora->delete();
 
             $resource = new BitacoraResource($bitacora);

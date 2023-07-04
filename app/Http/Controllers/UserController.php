@@ -14,7 +14,9 @@ use App\Http\Requests\AuthenticatedSessionRequest;
 use App\Http\Resources\AuthResource;
 use App\Traits\ApiResponder;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class UserController extends Controller
 {
@@ -59,10 +61,12 @@ class UserController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response(['errors' => $validator->errors()->all()], 422);
+            $errors = $validator->errors()->all();
+            return $this->error("Error al actualizar el registro", $errors);
         }
 
         $request['contrasena'] = Hash::make($request['contrasena']);
+        $role = $request->rol;
         $user = new User();
         $user->nombre = $request->nombre;
         $user->usuario = $request->usuario;
@@ -72,10 +76,13 @@ class UserController extends Controller
         $user->contrasena = $request->contrasena;
         #$user->estado = $request->estado;
         $user->save();
+        $user->assignRole($role);
 
-        return response()->json([
-            'data' => $user,
-        ], 201);
+        $resource = new UserResource($user);
+
+        return $this->success('Usuario registrado correctamente.', [
+            'usuario' => $resource
+        ]);
     }
 
     public function show($idUser)
@@ -84,20 +91,17 @@ class UserController extends Controller
             $user = User::where('id', $idUser)->first();
 
             if ($user == null) {
-                return response()->json([
-                    'data' => 'No se encontró el usuario.'
-                ],202);
+                return $this->error("Error, NO se encontró el registro.");
             }
 
-            #$user->load('bitacoras');
-            #$user->load('empresa');
-            #$user->load('perfil');
+            $resource = new UserResource($user);
 
-            return response()->json([
-                'data' => $user
-            ],200);
+            return $this->success('Información consultada correctamente.', [
+                'usuario' => $resource
+            ]);
+
         } catch (\Throwable $th) {
-            return response()->json($th->getMessage(), 501);
+            return $this->error("Error al mostrar el registro, error:{$th->getMessage()}.");
         }
     }
 
@@ -126,15 +130,14 @@ class UserController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response(['errors' => $validator->errors()->all()], 422);
+                $errors = $validator->errors()->all();
+                return $this->error("Error al actualizar el registro", $errors);
             }
 
             $user = User::where('id', $idUser)->first();
             
             if ($user == null) {
-                return response()->json([
-                    'data' => 'No se encontró el usuario.'
-                ],202);
+                return $this->error("Error, NO se encontró el registro.");
             }
 
             $user->nombre = $request->nombre;
@@ -145,9 +148,12 @@ class UserController extends Controller
             $user->estado = $request->estado; */
             $user->save();
             
-            return response()->json([
-                'data' => $user
-            ],202);
+            
+            $resource = new UserResource($user);
+
+            return $this->success('Registro actualizado correctamente.', [
+                'usuario' => $resource
+            ]);
 
         } catch (\Throwable $th) {
             return response()->json($th->getMessage(), 501);
@@ -158,14 +164,20 @@ class UserController extends Controller
     {
         try {
             $user = User::where('id', $idUser)->first();
+            if ($user == NULL)
+            {
+                return $this->error("Error, NO se encontró el registro.");
+            }
             $user->delete();
             
-            return response()->json([
-                'data' => $user
-            ],202);
+            $resource = new UserResource($user);
+
+            return $this->success('Registro borrado correctamente.', [
+                'usuario' => $resource
+            ]);
 
         } catch (\Throwable $th) {
-            return response()->json($th->getMessage(), 501);
+            return $this->error("Error al eliminar el registro, error:{$th->getMessage()}.");
         }
     }
 
@@ -183,15 +195,17 @@ class UserController extends Controller
         }
 
         if (Hash::check(request('password'), $user->contrasena)) {
+            
+            if ($user->tokens()->where('expires_at', '>', $now->format('Y-m-d H:i:s'))->count() > 0) {
+                
+                throw ValidationException::withMessages([
+                    'account' => 'Actualmente tiene una sesión activa.'
+                ]);
+            }
+            
+            // Comenzamos con la transacción en la base de datos
+            DB::beginTransaction();
             try {
-                
-                //dd($user->tokens());
-                /* if ($user->tokens()->whereTime('expires_at', '>', $now->format('YmdHis'))->count() > 0) {
-                    throw ValidationException::withMessages([
-                        'account' => 'Actualmente tiene una sesión activa.'
-                    ]);
-                } */
-                
                 $token = $user->createToken($tokenName, $user->getAllPermissionsSlug()->toArray(), $now->addMinutes($minutesToAdd));
                 //dd($token);
                 //dd($token->plainTextToken);
@@ -202,10 +216,13 @@ class UserController extends Controller
                 event(new LoginEvent($user));
     
                 $resource = new AuthResource($user);
+                
+                DB::commit();
                 return $this->success('Inicio de sesión exitoso.', [
                     'user' => $resource
                 ]);
             } catch (\Exception $e) {
+                DB::rollback();
                 return $this->error("Error al iniciir sesión, error:{$e->getMessage()}.");
             }
         } else {
@@ -215,22 +232,17 @@ class UserController extends Controller
 
     public function logout(Request $request)
     {
-        $token = $request->user()->token();
-        $token->revoke();
-        /* $bitacora = new Bitacora();
-        $bitacora->fecha = date('Y-m-d');
-        $bitacora->fecha_hora = date('Y-m-d H:i:s');
-        $bitacora->tipoevento_id = 1;
-        $bitacora->descripcion1 = 'El usuario ' . $request->user()->usuario;
-        $bitacora->descripcion2 = 'cerró sesión';
-        $bitacora->descripcion3 = 'desde la ip => ' . $request->ip();
-        $bitacora->usuario_id = $request->user()->id;
-        $bitacora->save(); */
+        try {
 
-        $response = 'Ha cerrado sesión correctamente.';
-        return response()->json([
-            'message'=> $response,
-        ],201);
+            $user = auth()->user();
+
+            $user->currentAccessToken()->delete();
+
+            event(new LogoutEvent($user));
+            return $this->success('Cierre de sesión exitoso.');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage());
+        }
     }
 
     public function username()

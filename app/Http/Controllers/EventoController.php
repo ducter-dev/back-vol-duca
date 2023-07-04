@@ -149,6 +149,10 @@ class EventoController extends Controller
     {
         try {
             $evento = evento::where('id', $id_evento)->first();
+            if ($evento == NULL)
+            {
+                return $this->error("Error, NO se encontró el registro.");
+            }
             $evento->delete();
 
             $bitacora = new Bitacora();

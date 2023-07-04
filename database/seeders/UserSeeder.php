@@ -3,10 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\Role;
+
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class UserSeeder extends Seeder
 {
@@ -17,17 +18,34 @@ class UserSeeder extends Seeder
      */
     public function run()
     {
-        $user = User::create([
-            'nombre' => 'Admin',
-            'usuario' => 'Admin2019$',
-            'correo' => 'admin@duca.com',
-            'correo_verificado' => now(),
-            'contrasena' => Hash::make('secret')
-        ]);
+        $user1 = User::create([
+            'nombre' =>  'Admin', 
+            'usuario' =>  '4dM1n$232o', 
+            'correo' =>  'michel.morales@ducter.com.mx', 
+            'contrasena' =>  Hash::make('secret'), 
+        ])->assignRole('administrador');
 
-        $UserRole = Role::query()->where('nombre', config('permisos.admin_role'))->get();
+        $user2 = User::create([
+            'nombre' =>  'supervisor', 
+            'usuario' =>  'sup3rv1s0r', 
+            'correo' =>  'supervisor@ducter.com.mx', 
+            'contrasena' =>  Hash::make('secret'), 
+        ])->assignRole('supervisor');
 
-        $user->roles()->sync($UserRole);
+        $user3 = User::create([
+            'nombre' =>  'operador', 
+            'usuario' =>  '0p3r4d0r', 
+            'correo' =>  'operador@ducter.com.mx', 
+            'contrasena' =>  Hash::make('secret'), 
+        ])->assignRole('operador');
+
+        $user4 = User::create([
+            'nombre' =>  'audirtor', 
+            'usuario' =>  '4ud1t04', 
+            'correo' =>  'auditor@ducter.com.mx', 
+            'contrasena' =>  Hash::make('secret'), 
+        ])->assignRole('auditor');
+
 
     }
 }
