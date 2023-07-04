@@ -20,7 +20,10 @@ class UserResource extends JsonResource
             'nombre' => $this->nombre,
             'usuario' => $this->usuario,
             'correo' => $this->correo,
+            'roles' => $this->getRoleNames()->toArray(),
+            'permissions_slugs' => $this->getAllPermissionsSlug()->toArray(),
             'creado' => $this->creado->format('Y-m-d H:i:s'),
+            'actualizado' => $this->actualizado->format('Y-m-d H:i:s'),
         ];
         return $data;
     }

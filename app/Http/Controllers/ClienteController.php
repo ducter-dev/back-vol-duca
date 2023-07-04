@@ -151,6 +151,10 @@ class ClienteController extends Controller
     {
         try {
             $cliente = Cliente::where('id', $id_cliente)->first();
+            if ($cliente == NULL)
+            {
+                return $this->error("Error, NO se encontró el registro.");
+            }
             $cliente->delete();
 
             $bitacora = new Bitacora();

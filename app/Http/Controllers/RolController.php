@@ -16,7 +16,6 @@ class RolController extends Controller
     public function index()
     {
         $roles = Role::all();
-        //$roles->load('permissions');
         $roles = RolResources::collection($roles)->additional([
             'status' => 'success',
             "message" => 'Información consultada correctamente.',
@@ -30,7 +29,7 @@ class RolController extends Controller
     {
         DB::beginTransaction();
         try {
-            $role = Role::create($request->only('name', 'display_name', 'description', 'guard_name'));
+            $role = Role::create($request->only('name', 'guard_name'));
 
             $role->permissions()->sync($request->get('permissions'));
             DB::commit();
@@ -53,7 +52,7 @@ class RolController extends Controller
     {
         DB::beginTransaction();
         try {
-            $role->update($request->only('name', 'display_name', 'description', 'guard_name'));
+            $role->update($request->only('name', 'guard_name'));
 
             $role->permissions()->sync($request->get('permissions'));
 
