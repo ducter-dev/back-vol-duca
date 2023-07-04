@@ -66,8 +66,50 @@ class RolController extends Controller
         }
     }
 
-    public function destroy($id_rol)
+    public function destroy(Role $role)
+    {
+        if ($role->name == 'administrador') {
+            return $this->error('Este registro no se puede eliminar porque tiene relación con otros.');
+        }
+
+        DB::beginTransaction();
+
+        try {
+
+            $role->delete();
+
+            DB::commit();
+
+            $resource = new RolResources($role);
+
+            return $this->success('Registro borrado correctamente.', [
+                'rol' => $resource
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return $this->error("Error al eliminar el registro, error:{$e->getMessage()}.");
+        }
+    }
+
+    public function restoreRol(Role $role)
     {
         
+        DB::beginTransaction();
+        try {
+
+            $role->restore();
+
+            DB::commit();
+
+            $resource = new RolResources($role);
+
+            return $this->success('Registro restaurado correctamente.', [
+                'rol' => $resource
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            return $this->error("Error al restaurar el registro, error:{$e->getMessage()}.");
+        }
     }
 }

@@ -168,6 +168,11 @@ class UserController extends Controller
             {
                 return $this->error("Error, NO se encontró el registro.");
             }
+            $roles = $user->getRoleNames();
+
+            foreach ($roles as $role) {
+                $user->removeRole($role);
+            }
             $user->delete();
             
             $resource = new UserResource($user);
