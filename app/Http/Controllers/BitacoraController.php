@@ -104,4 +104,49 @@ class BitacoraController extends Controller
             return $this->error("Error al eliminar el regsitro, error:{$th->getMessage()}.");
         }
     }
+
+    public function filtrarFecha($fecha, Request $request) {
+        
+        try {
+            $bitacoras = Bitacora::where('fecha', $fecha)->paginate(20);
+            if ($bitacoras == NULL)
+            {
+                return $this->error("Error, NO se encontró el registro.");
+            }
+            $bitacoras->load('user');
+            $bitacoras->load('evento');
+
+            $bitacoras = BitacoraResource::collection($bitacoras)->additional([
+                'status' => 'success',
+                "message" => 'Información consultada correctamente.',
+            ]);
+            
+            return $bitacoras;
+
+        } catch (\Throwable $th) {
+            return response()->json($th->getMessage(), 501);
+        }
+        
+    }
+
+
+    public function filtrarErrores(Request $request) {
+
+        $bitacoras = Bitacora::where('evento_id', 7)->orWhere('evento_id', 9)->orWhere('evento_id', 19)->paginate(20);
+
+        if ($bitacoras == NULL)
+        {
+            return $this->error("Error, NO se encontró el registro.");
+        }
+
+        $bitacoras->load('user');
+        $bitacoras->load('evento');
+
+        $bitacoras = BitacoraResource::collection($bitacoras)->additional([
+            'status' => 'success',
+            "message" => 'Información consultada correctamente.',
+        ]);
+        
+        return $bitacoras;
+    }
 }

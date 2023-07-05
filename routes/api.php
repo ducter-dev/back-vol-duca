@@ -47,6 +47,11 @@ Route::resource('productos', ProductoController::class)->middleware(['auth:sanct
 Route::resource('roles', RolController::class)->middleware(['auth:sanctum']);
 Route::resource('permisos', PermisoController::class)->middleware(['auth:sanctum']);
 Route::resource('revisiones', RevisionController::class)->middleware(['auth:sanctum']);
+Route::get('bitacora/fecha/{fecha}', [BitacoraController::class, 'filtrarFecha'])->middleware('auth:sanctum');
+
+
+// Errores
+Route::get('errores', [BitacoraController::class, 'filtrarErrores'])->middleware('auth:sanctum');
 
 Route::group([
     'prefix' => 'users'
