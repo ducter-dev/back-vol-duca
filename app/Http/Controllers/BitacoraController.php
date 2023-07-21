@@ -14,9 +14,7 @@ class BitacoraController extends Controller
 
     public function index()
     {
-        $bitacoras = Bitacora::paginate(20);
-        $bitacoras->load('usuario');
-        $bitacoras->load('evento');
+        $bitacoras = Bitacora::paginate(15);
         $bitacoras = BitacoraResource::collection($bitacoras)->additional([
             'status' => 'success',
             "message" => 'Información consultada correctamente.',
@@ -67,8 +65,6 @@ class BitacoraController extends Controller
             $bitacora->descripcion3 = $request->descripcion3;
             $bitacora->usuario_id = $request->usuario_id;
             $bitacora->save();
-            $bitacora->load('usuario');
-            $bitacora->load('evento');
 
             $resource = new BitacoraResource($bitacora);
 
@@ -113,8 +109,6 @@ class BitacoraController extends Controller
             {
                 return $this->error("Error, NO se encontró el registro.");
             }
-            $bitacoras->load('user');
-            $bitacoras->load('evento');
 
             $bitacoras = BitacoraResource::collection($bitacoras)->additional([
                 'status' => 'success',
@@ -124,7 +118,7 @@ class BitacoraController extends Controller
             return $bitacoras;
 
         } catch (\Throwable $th) {
-            return response()->json($th->getMessage(), 501);
+            return $this->error("Error al obtener los egistros, error:{$th->getMessage()}.");
         }
         
     }
@@ -132,15 +126,12 @@ class BitacoraController extends Controller
 
     public function filtrarErrores(Request $request) {
 
-        $bitacoras = Bitacora::where('evento_id', 7)->orWhere('evento_id', 9)->orWhere('evento_id', 19)->paginate(20);
+        $bitacoras = Bitacora::where('evento_id', 7)->orWhere('evento_id', 9)->orWhere('evento_id', 19)->paginate(15);
 
         if ($bitacoras == NULL)
         {
             return $this->error("Error, NO se encontró el registro.");
         }
-
-        $bitacoras->load('user');
-        $bitacoras->load('evento');
 
         $bitacoras = BitacoraResource::collection($bitacoras)->additional([
             'status' => 'success',

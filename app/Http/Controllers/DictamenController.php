@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Validator;
 use App\Http\Resources\DictamenResource;
+use App\Models\Balance;
 use App\Models\Bitacora;
 use App\Models\Dictamen;
 use App\Traits\ApiResponder;
@@ -209,5 +210,37 @@ class DictamenController extends Controller
         } catch (\Throwable $th) {
             return $this->error("Error al eliminar el registro, error:{$th->getMessage()}.");
         }
+    }
+
+    public function filtrarFecha($fecha, Request $request) {
+        
+        try {
+
+            $balance = Balance::where('fecha', $fecha)->first();
+            
+
+            if ($balance == NULL)
+            {
+                return $this->error("Error, NO se encontró balance en esta fecha.");
+            }
+
+            $dictamenes = Dictamen::where('balance_id', $balance->id)->get();
+            if ($dictamenes == NULL)
+            {
+                return $this->error("Error, NO se encontró el registro.");
+            }
+            $dictamenes->load('cliente');
+            $dictamenes->load('balance');
+            $dictamenes = DictamenResource::collection($dictamenes)->additional([
+                'status' => 'success',
+                "message" => 'Información consultada correctamente.',
+            ]);
+            
+            return $dictamenes;
+
+        } catch (\Throwable $th) {
+            return $this->error("Error al obtener los registros, error:{$th->getMessage()}.");
+        }
+        
     }
 }

@@ -24,7 +24,7 @@ class UserController extends Controller
     
     public function index()
     {
-        $users = User::all();
+        $users = User::paginate(15);
         #$users->load('bitacoras');
         #$users->load('perfil');
         #$users->load('contrasenas');
@@ -41,11 +41,9 @@ class UserController extends Controller
         $rules = [
             'nombre' => 'required|string|max:50',
             'usuario' => 'required|string|max:50|unique:usuarios',
-            #'perfil_id' => 'required|numeric|min:1',
-            #'empresa_id' => 'required|numeric|min:1',
             'correo' => 'required|string|email|max:255|unique:usuarios',
+            'rol' => 'required|numeric|min:1',
             'contrasena' => 'required|string|between:8,50|confirmed',
-            'estado' => 'required|numeric|min:1',
         ];
 
         $validator = Validator::make( $request->all(), $rules, $messages = [
@@ -62,7 +60,7 @@ class UserController extends Controller
 
         if ($validator->fails()) {
             $errors = $validator->errors()->all();
-            return $this->error("Error al actualizar el registro", $errors);
+            return $this->error("Error al insertar el registro", $errors);
         }
 
         $request['contrasena'] = Hash::make($request['contrasena']);
@@ -112,6 +110,7 @@ class UserController extends Controller
                 'nombre' => 'required|string|max:50',
                 'usuario' => 'required|string|max:50',
                 'correo' => 'required|string|email|max:255|',
+                'rol' => 'required|numeric|min:1',
                 /* 'perfil_id' => 'required|numeric|min:1',
                 'empresa_id' => 'required|numeric|min:1',
                 'estado' => 'required|numeric|min:1', */
@@ -139,7 +138,7 @@ class UserController extends Controller
             if ($user == null) {
                 return $this->error("Error, NO se encontró el registro.");
             }
-
+            $role = $request->rol;
             $user->nombre = $request->nombre;
             $user->usuario = $request->usuario;
             $user->correo= $request->correo;
@@ -147,7 +146,12 @@ class UserController extends Controller
             $user->empresa_id = $request->empresa_id;
             $user->estado = $request->estado; */
             $user->save();
-            
+            $roles = $user->roles;
+
+            foreach ($roles as $rol) {
+                $user->removeRole($rol);
+            }
+            $user->assignRole($role);
             
             $resource = new UserResource($user);
 

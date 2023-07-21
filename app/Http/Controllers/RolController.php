@@ -15,7 +15,7 @@ class RolController extends Controller
     
     public function index()
     {
-        $roles = Role::all();
+        $roles = Role::paginate(15);
         $roles = RolResources::collection($roles)->additional([
             'status' => 'success',
             "message" => 'Información consultada correctamente.',
@@ -33,7 +33,9 @@ class RolController extends Controller
 
             $role->permissions()->sync($request->get('permissions'));
             DB::commit();
-            return $this->success('Registro guardado correctamente.', new RolResources($role));
+            return $this->success('Registro guardado correctamente.', [
+                'rol' => new RolResources($role)
+            ]);
         } catch (\Throwable $th) {
             DB::rollBack();
             $data = json_encode($request->all());
@@ -45,7 +47,9 @@ class RolController extends Controller
     {
         $role->load('permissions');
 
-        return $this->success('Registro consultado correctamente.', new RolResources($role));
+        return $this->success('Registro consultado correctamente.', [
+            'rol' => new RolResources($role)
+        ]);
     }
 
     public function update(Request $request, Role $role)
@@ -58,7 +62,9 @@ class RolController extends Controller
 
             DB::commit();
 
-            return $this->success('Registro actualizado correctamente.', new RolResources($role));
+            return $this->success('Registro actualizado correctamente.', [
+                'rol' => new RolResources($role)
+            ]);
         } catch (\Throwable $th) {
             DB::rollBack();
             $data = json_encode($request->all());

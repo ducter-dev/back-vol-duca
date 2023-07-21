@@ -15,7 +15,7 @@ class ClienteController extends Controller
     
     public function index()
     {
-        $clientes = Cliente::paginate(20);
+        $clientes = Cliente::paginate(15);
         $clientes = ClienteResource::collection($clientes)->additional([
             'status' => 'success',
             "message" => 'Información consultada correctamente.',

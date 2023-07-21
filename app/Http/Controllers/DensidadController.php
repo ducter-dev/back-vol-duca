@@ -64,7 +64,7 @@ class DensidadController extends Controller
             $resource = new DensidadResource($densidad);
 
             return $this->success('Densidad registrada correctamente.', [
-                'compuesto' => $resource
+                'densidad' => $resource
             ]);
 
         } catch (\Throwable $th) {
@@ -86,7 +86,7 @@ class DensidadController extends Controller
             $resource = new DensidadResource($densidad);
 
             return $this->success('Información consultada correctamente.', [
-                'compuesto' => $resource
+                'densidad' => $resource
             ]);
 
         } catch (\Throwable $th) {

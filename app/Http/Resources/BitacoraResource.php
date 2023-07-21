@@ -16,8 +16,8 @@ class BitacoraResource extends JsonResource
     {
         $data = [
             'id' => $this->id,
-            'fecha' => $this->fecha->format('Y-m-d'),
-            'fecha_hora' => $this->fecha_hora->format('Y-m-d H:i:s'),
+            'fecha' => $this->fecha,
+            'fecha_hora' => $this->fecha_hora,
             'evento_id' => $this->evento_id,
             'evento' => new EventoResource($this->evento),
             'descripcion1' => $this->descripcion1,

@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\ArchivoController;
+use App\Http\Controllers\BalanceController;
 use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\CompuestoController;
@@ -36,6 +37,7 @@ Route::post('json/v3/empresas/{idEmpresa}/fecha/{fecha}/json/{tipo}/unidad/{unid
 Route::post('restore/roles/{role}', [RolController::class, 'restoreRol'])->middleware(['auth:sanctum']);
 /* Route::resource('empresas', EmpresaController::class)->middleware(['auth:api', 'admin']); */
 Route::resource('empresas', EmpresaController::class)->middleware(['auth:sanctum']);
+Route::resource('balances', BalanceController::class)->middleware(['auth:sanctum']);
 Route::resource('archivos', ArchivoController::class)->middleware(['auth:sanctum']);
 Route::resource('bitacora', BitacoraController::class)->middleware(['auth:sanctum']);
 Route::resource('clientes', ClienteController::class)->middleware(['auth:sanctum']);
@@ -48,7 +50,13 @@ Route::resource('roles', RolController::class)->middleware(['auth:sanctum']);
 Route::resource('permisos', PermisoController::class)->middleware(['auth:sanctum']);
 Route::resource('revisiones', RevisionController::class)->middleware(['auth:sanctum']);
 Route::get('bitacora/fecha/{fecha}', [BitacoraController::class, 'filtrarFecha'])->middleware('auth:sanctum');
+Route::get('dictamenes/fecha/{fecha}', [DictamenController::class, 'filtrarFecha'])->middleware('auth:sanctum');
 
+Route::get('errores', [BitacoraController::class, 'filtrarErrores'])->middleware('auth:sanctum');
+Route::get('permisos-all', [PermisoController::class, 'all'])->middleware('auth:sanctum');
+
+
+Route::get('json/fecha/{fecha}', [EmpresaController::class, 'checkDataExperion'])->middleware('auth:api');
 
 // Errores
 Route::get('errores', [BitacoraController::class, 'filtrarErrores'])->middleware('auth:sanctum');

@@ -266,7 +266,7 @@ class EmpresaController extends Controller
                     ->get();
 
             $totalVentasIrge = $totalVentasIrge_DB[0]->masa;
-
+            
 
             $ventasIrge = DB::table('balances_duca.salidas')
                     ->select(DB::raw('SUM(valor) AS masa'), DB::raw('cliente'))
@@ -313,7 +313,7 @@ class EmpresaController extends Controller
                 ->first();
             $volRecibido = is_null($recepcionGas->recibido) ? 0 : $recepcionGas->recibido;
 
-
+            
             if (count($dictamenes) == 2) {
                 /* Listar los dictámenes */
                 
@@ -1866,6 +1866,63 @@ class EmpresaController extends Controller
     private function convertLitros($tipo, $valor, $densidad)
     {   
         return $tipo === 'tons' ? $valor : ($valor * 1000) / $densidad;
+    }
+
+    public function checkDataExperion($fecha) {
+        try {
+            // Revisar si se subieron los datos del seleccionado
+            
+            //  balance diario
+            $balance = Balance::where('fecha', $fecha)->first();
+
+            $faltantes = array();
+            if ($balance == NULL)
+            {
+                return response()->json([
+                    'estatus' => false,
+                    'data' => 'No se encontró el balance con la fecha ' . $fecha
+                ],200);
+            }
+
+            $salidasLlenaderas = Salida::where('balance_id', $balance->id_balance)->where('tipo', 'l')->get();
+            if (count($salidasLlenaderas) == 0) {
+                array_push($faltantes, 'Salidas Llenadera');
+            }
+
+            /* //  contenedorMovimientos
+            $contenedorMovimientos = ContenedorMovimiento::where('balance_id', $balance->id_balance)->get();
+            if (count($contenedorMovimientos) == 0) {
+                array_push($faltantes, 'Movimientos de Esferas');
+            }
+
+            //  balanceMovimientos
+            $balanceMovimientos = BalanceMovimiento::where('balance_id', $balance->id_balance)->get();
+            if (count($balanceMovimientos) == 0) {
+                array_push($faltantes, 'Entradas - Salidas Procesadas Esferas');
+            }
+
+            //  contenedor Balance
+            $contenedorBalance = ContenedorBalance::where('balance_id', $balance->id_balance)->get();
+            if (count($contenedorBalance) == 0) {
+                array_push($faltantes, 'Inventario Final de Esferas');
+            } */
+
+            if($balance->almacenamiento == 0 && $balance->inventarioInicial == 0) {
+                array_push($faltantes, 'Balance Actualizado');
+            }
+
+            $estatus = count($faltantes) == 0 ? true : false;
+            $mensaje = count($faltantes) == 0 ? 'Información Completa' : $faltantes;
+
+            return response()->json([
+                'estatus' => $estatus,
+                'data' => $mensaje
+            ],200);
+            
+
+        } catch (\Throwable $th) {
+            return $this->error("Error al eliminar el registro, error:{$th->getMessage()}.");
+        }
     }
 
 }

@@ -15,7 +15,7 @@ class CompuestoController extends Controller
     
     public function index()
     {
-        $compuestos = Compuesto::all();
+        $compuestos = Compuesto::paginate(15);
         $compuestos = CompuestoResource::collection($compuestos)->additional([
             'status' => 'success',
             "message" => 'Información consultada correctamente.',

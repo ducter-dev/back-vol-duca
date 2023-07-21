@@ -17,13 +17,19 @@ class PermisoController extends Controller
 
     public function index()
     {
-        $query = QueryBuilder::for(Permission::class)->allowedFilters([
-            \Spatie\QueryBuilder\AllowedFilter::trashed(),
-            \Spatie\QueryBuilder\AllowedFilter::partial('name'),
-            \Spatie\QueryBuilder\AllowedFilter::partial('description')
+        $items = Permission::paginate(15);
+        $permisos = PermissionResource::collection($items)->additional([
+            'status' => 'success',
+            "message" => 'Información consultada correctamente.',
         ]);
+        
+        return $permisos;
+    
+    }
 
-        $items = $query->orderByDesc('id')->paginate()->appends(request()->query());
+    public function all()
+    {
+        $items = Permission::all();
         $permisos = PermissionResource::collection($items)->additional([
             'status' => 'success',
             "message" => 'Información consultada correctamente.',
@@ -39,7 +45,9 @@ class PermisoController extends Controller
         try {
             $permiso = Permission::create($request->only('name', 'description', 'guard_name'));
             DB::commit();
-            return $this->success('Registro guardado correctamente.', new PermissionResource($permiso));
+            return $this->success('Registro guardado correctamente.', [
+                'permiso' => new PermissionResource($permiso)
+            ]);
         } catch (\Throwable $th) {
             DB::rollBack();
             $data = json_encode($request->all());
@@ -49,19 +57,23 @@ class PermisoController extends Controller
 
     public function show($id_permission)
     {   
-        $permission = Permission::where('id', $id_permission)->first();
+        $permiso = Permission::where('id', $id_permission)->first();
 
-        return $this->success('Registro consultado correctamente.', new PermissionResource($permission));
+        return $this->success('Registro consultado correctamente.', [
+            'permiso' => new PermissionResource($permiso)
+        ]);
     }
 
     public function update(Request $request, $id_permission)
     {
         DB::beginTransaction();
         try {
-            $permission = Permission::where('id', $id_permission)->first();
-            $permission->update($request->only('name', 'guard_name', 'description'));
+            $permiso = Permission::where('id', $id_permission)->first();
+            $permiso->update($request->only('name', 'guard_name', 'description'));
             DB::commit();
-            return $this->success('Registro actualizado correctamente.', new PermissionResource($permission));
+            return $this->success('Registro actualizado correctamente.', [
+                'permiso' => new PermissionResource($permiso)
+            ]);
         } catch (\Throwable $th) {
             DB::rollBack();
             $data = json_encode($request->all());
@@ -69,9 +81,9 @@ class PermisoController extends Controller
         }
     }
 
-    public function destroy(Permission $permission)
+    public function destroy(Permission $permiso)
     {
-        if ($permission->roles()->exists()) {
+        if ($permiso->roles()->exists()) {
             return $this->error('Este registro no se puede eliminar porque tiene relación con otros.');
         }
 
@@ -79,11 +91,13 @@ class PermisoController extends Controller
 
         try {
 
-            $permission->delete();
+            $permiso->delete();
 
             DB::commit();
 
-            return $this->success('Registro eliminado correctamente.');
+            return $this->success('Registro eliminado correctamente.', [
+                'permiso' => new PermissionResource($permiso)
+            ]);
         } catch (\Exception $e) {
             DB::rollback();
             return $this->error("Error al eliminar el registro, error:{$e->getMessage()}.");

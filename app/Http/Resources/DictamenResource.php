@@ -23,7 +23,7 @@ class DictamenResource extends JsonResource
             'fechaEmisionDictamen' => $this->fechaEmisionDictamen,
             'resultadoDictamen' => $this->resultadoDictamen,
             'densidad' => $this->densidad,
-            'volumen' => $this->densidad,
+            'volumen' => $this->volumen,
             'cliente_id' => $this->cliente_id,
             'cliente' => new ClienteResource($this->cliente),
             'rutaDictamen' => $this->rutaDictamen,
