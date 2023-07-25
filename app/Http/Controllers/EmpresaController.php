@@ -27,7 +27,7 @@ class EmpresaController extends Controller
 
     public function index()
     {
-        $empresas = Empresa::all();
+        $empresas = Empresa::paginate(15);
         $empresas = EmpresaResource::collection($empresas)->additional([
             'status' => 'success',
             "message" => 'Información consultada correctamente.',

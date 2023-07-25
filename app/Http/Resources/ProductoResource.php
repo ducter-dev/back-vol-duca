@@ -18,6 +18,7 @@ class ProductoResource extends JsonResource
             'id' => $this->id,
             'descripcion' => $this->descripcion,
             'clave' => $this->clave,
+            'compuestos' => CompuestoResource::collection($this->compuestos),
             'creado' => $this->created_at->format('Y-m-d H:i:s'),
             'actualizado' => $this->updated_at->format('Y-m-d H:i:s'),
         ];

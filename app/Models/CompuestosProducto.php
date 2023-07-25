@@ -14,5 +14,6 @@ class CompuestosProducto extends Model
     protected $fillable = [
         'producto_id',
         'compuesto_id',
+        'porcentaje',
     ];
 }

@@ -15,7 +15,7 @@ class RevisionController extends Controller
 
     public function index()
     {
-        $revisiones = Revision::all();
+        $revisiones = Revision::paginate(15);
 
         $revisiones = RevisionResource::collection($revisiones)->additional([
             'status' => 'success',

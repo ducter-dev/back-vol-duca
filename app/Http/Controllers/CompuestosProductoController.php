@@ -9,12 +9,12 @@ class CompuestosProductoController extends Controller
 {
     public function index()
     {
-        //
+        
     }
 
     public function store(Request $request)
     {
-        //
+        
     }
 
     public function show(CompuestoProducto $compuestoProducto)

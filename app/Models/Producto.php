@@ -16,11 +16,13 @@ class Producto extends Model
 
     public function compuestos()
     {
-        return $this->belongsToMany(Compuesto::class, 'compuestos_productos')->withPivot('porcentaje')->as('porcentaje');
+        //return $this->belongsToMany(Compuesto::class, 'compuestos_productos')->withPivot('porcentaje')->as('porcentaje');
+        return $this->belongsToMany(Compuesto::class, 'compuestos_productos')->withPivot('porcentaje')->as('porcentajes');
     }
 
     public function omisiones()
     {
         return $this->belongsTo(Empresa::class, 'producto_omision');
     }
+    
 }

@@ -4,7 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class CompuestoResource extends JsonResource
+class CompuestosProductosResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,12 +16,13 @@ class CompuestoResource extends JsonResource
     {
         $data = [
             'id' => $this->id,
-            'descripcion' => $this->descripcion,
-            'porcentajes' => $this->porcentajes,
+            'compuesto' => new CompuestoResource($this->compuesto_id),
+            'producto' => new ProductoResource($this->producto_id),
+            'porcentaje' => $this->porcentajes,
             'creado' => $this->created_at->format('Y-m-d H:i:s'),
             'actualizado' => $this->updated_at->format('Y-m-d H:i:s'),
-        ];
 
+        ];
         return $data;
     }
 }

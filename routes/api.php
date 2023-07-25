@@ -54,8 +54,8 @@ Route::get('dictamenes/fecha/{fecha}', [DictamenController::class, 'filtrarFecha
 
 Route::get('errores', [BitacoraController::class, 'filtrarErrores'])->middleware('auth:sanctum');
 Route::get('permisos-all', [PermisoController::class, 'all'])->middleware('auth:sanctum');
-
-
+Route::get('productos-all', [ProductoController::class, 'all'])->middleware('auth:sanctum');
+Route::post('productos-compuestos', [ProductoController::class, 'attachCompuestos'])->middleware(['auth:sanctum']);
 Route::get('json/fecha/{fecha}', [EmpresaController::class, 'checkDataExperion'])->middleware('auth:api');
 
 // Errores

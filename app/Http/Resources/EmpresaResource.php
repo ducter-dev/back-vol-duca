@@ -22,6 +22,7 @@ class EmpresaResource extends JsonResource
             'rfc_representante' => $this->rfc_representante,
             'proveedor' => $this->proveedor,
             'tipo_caracter' => $this->tipo_caracter,
+            'modalidad_permiso' => $this->modalidad_permiso,
             'num_permiso' => $this->num_permiso,
             'clave_instalacion' => $this->clave_instalacion,
             'descripcion_instalacion' => $this->descripcion_instalacion,
@@ -31,14 +32,11 @@ class EmpresaResource extends JsonResource
             'numero_ductos_entradas_salidas' => $this->numero_ductos_entradas_salidas,
             'numero_ductos_distribucion' => $this->numero_ductos_distribucion,
             'fecha_hora_corte' => $this->fecha_hora_corte,
-            'producto_omision' => new ProductoResource($this->productoOmision),
+            'producto_omision' => $this->producto_omision,
+            'producto' => new ProductoResource($this->productoOmision),
             'creado' => $this->creado->format('Y-m-d H:i:s'),
             'actualizado' => $this->actualizado->format('Y-m-d H:i:s'),
         ];
-
-
-        $data['productos'] = ProductoResource::collection($this->productos);
-
         return $data;
     }
 }
