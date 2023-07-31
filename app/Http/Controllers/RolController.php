@@ -25,22 +25,35 @@ class RolController extends Controller
 
     }
 
+    public function all()
+    {
+        $roles = Role::all(15);
+        $roles = RolResources::collection($roles)->additional([
+            'status' => 'success',
+            "message" => 'Información consultada correctamente.',
+        ]);
+        
+        return $roles;
+
+    }
+
     public function store(Request $request)
     {
         DB::beginTransaction();
         try {
+            //dd($request->only('name', 'guard_name'));
             $role = Role::create($request->only('name', 'guard_name'));
-
             $role->permissions()->sync($request->get('permissions'));
+            dd($role);
             DB::commit();
             return $this->success('Registro guardado correctamente.', [
                 'rol' => new RolResources($role)
             ]);
-        } catch (\Throwable $th) {
-            DB::rollBack();
-            $data = json_encode($request->all());
-            return $this->error('No se creó Rol');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return $this->error("Error al eliminar el crear, error:{$e->getMessage()}.");
         }
+        
     }
 
     public function show(Role $role)
@@ -68,7 +81,7 @@ class RolController extends Controller
         } catch (\Throwable $th) {
             DB::rollBack();
             $data = json_encode($request->all());
-            return $this->error('No se creó Rol');
+            return $this->error('No se actualizó el Rol');
         }
     }
 
@@ -97,11 +110,11 @@ class RolController extends Controller
         }
     }
 
-    public function restoreRol(Role $role)
+    public function restoreRol($idRole)
     {
-        
         DB::beginTransaction();
         try {
+            $role = Role::withTrashed()->where('id', $idRole)->first();
 
             $role->restore();
 

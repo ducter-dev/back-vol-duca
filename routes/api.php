@@ -34,7 +34,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::post('json/v3/empresas/{idEmpresa}/fecha/{fecha}/json/{tipo}/unidad/{unidad}', [EmpresaController::class, 'crearJsonV1'])->middleware('auth:sanctum');
-Route::post('restore/roles/{role}', [RolController::class, 'restoreRol'])->middleware(['auth:sanctum']);
+Route::post('restore/{role}', [RolController::class, 'restoreRol'])->middleware(['auth:sanctum']);
 /* Route::resource('empresas', EmpresaController::class)->middleware(['auth:api', 'admin']); */
 Route::resource('empresas', EmpresaController::class)->middleware(['auth:sanctum']);
 Route::resource('balances', BalanceController::class)->middleware(['auth:sanctum']);
@@ -56,6 +56,7 @@ Route::get('errores', [BitacoraController::class, 'filtrarErrores'])->middleware
 Route::get('permisos-all', [PermisoController::class, 'all'])->middleware('auth:sanctum');
 Route::get('productos-all', [ProductoController::class, 'all'])->middleware('auth:sanctum');
 Route::get('compuestos-all', [CompuestoController::class, 'all'])->middleware('auth:sanctum');
+Route::get('perfiles-all', [RolController::class, 'all'])->middleware('auth:sanctum');
 Route::post('productos-compuestos', [ProductoController::class, 'attachCompuestos'])->middleware(['auth:sanctum']);
 Route::get('json/fecha/{fecha}', [EmpresaController::class, 'checkDataExperion'])->middleware('auth:api');
 
