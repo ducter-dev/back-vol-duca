@@ -33,7 +33,7 @@ class RegisterUser extends Mailable
     {
         return new Envelope(
             from: new Address('info@volumetricos-duca.com.mx', 'Volumetricos Duca'),
-            subject: 'Register User',
+            subject: 'Registro de usuario',
         );
     }
 
@@ -45,7 +45,7 @@ class RegisterUser extends Mailable
     public function content()
     {
         return new Content(
-            markdown: 'email.registed',
+            markdown: 'emails.users.registred',
             with: [
                 'data' => $this->registedData,
             ],
