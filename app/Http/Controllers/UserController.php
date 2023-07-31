@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\UserResource;
 use App\Http\Requests\AuthenticatedSessionRequest;
 use App\Http\Resources\AuthResource;
+use App\Mail\RegisterUser;
 use App\Traits\ApiResponder;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class UserController extends Controller
@@ -62,7 +64,7 @@ class UserController extends Controller
             $errors = $validator->errors()->all();
             return $this->error("Error al insertar el registro", $errors);
         }
-
+        $passwordPlain = $request['contrasena'];
         $request['contrasena'] = Hash::make($request['contrasena']);
         $role = $request->rol;
         $user = new User();
@@ -77,6 +79,14 @@ class UserController extends Controller
         $user->assignRole($role);
 
         $resource = new UserResource($user);
+
+        $registedData = [
+            'name'      => $user->nombre,
+            'email'     => $user->correo,
+            'password'  => $passwordPlain
+        ];
+
+        Mail::to($user->correo)->send(new RegisterUser($registedData));
 
         return $this->success('Usuario registrado correctamente.', [
             'usuario' => $resource
