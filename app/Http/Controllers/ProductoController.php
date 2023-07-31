@@ -6,6 +6,7 @@ use App\Http\Resources\CompuestosProductosResource;
 use App\Http\Resources\ProductoResource;
 use App\Models\Bitacora;
 use App\Models\CompuestosProducto;
+use App\Models\Empresa;
 use App\Models\Producto;
 use App\Traits\ApiResponder;
 use Illuminate\Http\Request;
@@ -163,6 +164,14 @@ class ProductoController extends Controller
     public function destroy(Request $request, $id_producto)
     {
         try {
+            $empresa = Empresa::where('id', 1)->first();
+            $productoOmision = intval($empresa->producto_omision);
+            if ($productoOmision == intval($id_producto))
+            {
+                
+                return $this->error("Error: No se puede eliminar el producto por omisión");
+            } 
+
             $producto = Producto::where('id', $id_producto)->first();
             if ($producto == NULL)
             {
@@ -194,9 +203,6 @@ class ProductoController extends Controller
     public function attachCompuestos(Request $request)
     {
         try {
-            
-            
-
             $producto = Producto::where('id', $request->producto)->first();
             if ($producto == NULL)
             {
@@ -204,7 +210,6 @@ class ProductoController extends Controller
             }
 
             $data = $request->get('data');
-            
             $producto->compuestos()->detach();
 
             foreach ($data as $comp) {

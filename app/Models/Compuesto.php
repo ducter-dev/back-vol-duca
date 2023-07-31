@@ -15,7 +15,6 @@ class Compuesto extends Model
 
     public function productos()
     {
-
         return $this->belongsToMany(Producto::class);
     }
 }

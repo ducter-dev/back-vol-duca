@@ -17,7 +17,6 @@ class CompuestoResource extends JsonResource
         $data = [
             'id' => $this->id,
             'descripcion' => $this->descripcion,
-            'porcentajes' => $this->porcentajes,
             'creado' => $this->created_at->format('Y-m-d H:i:s'),
             'actualizado' => $this->updated_at->format('Y-m-d H:i:s'),
         ];

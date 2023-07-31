@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Producto;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class CompuestosProductosResource extends JsonResource
@@ -16,9 +17,8 @@ class CompuestosProductosResource extends JsonResource
     {
         $data = [
             'id' => $this->id,
-            'compuesto' => new CompuestoResource($this->compuesto_id),
-            'producto' => new ProductoResource($this->producto_id),
-            'porcentaje' => $this->porcentajes,
+            'descripcion' => $this->descripcion,
+            'data' => $this->porcentajes,
             'creado' => $this->created_at->format('Y-m-d H:i:s'),
             'actualizado' => $this->updated_at->format('Y-m-d H:i:s'),
 

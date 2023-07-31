@@ -16,4 +16,12 @@ class CompuestosProducto extends Model
         'compuesto_id',
         'porcentaje',
     ];
+
+    public function producto() {
+        return $this->belongsTo(Producto::class, 'producto_id');
+    }
+
+    public function compuesto() {
+        return $this->belongsTo(Compuesto::class, 'compuesto_id');
+    }
 }

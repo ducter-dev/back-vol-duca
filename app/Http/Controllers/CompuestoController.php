@@ -24,6 +24,17 @@ class CompuestoController extends Controller
         return $compuestos;
     }
 
+    public function all()
+    {
+        $compuestos = Compuesto::all();
+        $compuestos = CompuestoResource::collection($compuestos)->additional([
+            'status' => 'success',
+            "message" => 'Información consultada correctamente.',
+        ]);
+        
+        return $compuestos;
+    }
+
     public function store(Request $request)
     {
         try {
