@@ -19,6 +19,7 @@ class AuthResource extends JsonResource
             'nombre' => $this->nombre,
             'usuario' => $this->usuario,
             'correo' => $this->correo,
+            'verificado' => $this->correo_verificado,
             'creado' => $this->creado->format('Y-m-d H:i:s'),
             'permissions_slugs' => $this->getAllPermissionsSlug()->toArray(),
             'actualizado' => $this->actualizado->format('Y-m-d H:i:s'),

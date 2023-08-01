@@ -268,4 +268,45 @@ class UserController extends Controller
     {
         return 'usuario';
     }
+
+    public function updatePassword(Request $request, $idUser)
+    {
+        $rules = [
+            'contrasena' => 'required|string|between:8,50|confirmed',
+        ];
+
+        $validator = Validator::make( $request->all(), $rules, $messages = [
+            'required' => 'El campo :attribute es requerido.',
+            'numeric' => 'El campo :attribute debe ser númerico.',
+            'string' => 'El campo :attribute debe ser tipo texto.',
+            'max' => 'El campo :attribute excede el tamaño requerido (:max).',
+            'date_format' => 'El campo :attribute debe tener formato fecha (Y-m-d) ó formato fecha hora (YYYY-MM-DD HH:mm:ss)',
+            'email' => 'El campo email no cumple con el formato estándar.',
+            'unique' => 'El campo :attribute no se puede utilizar.',
+            'between' => 'El campo :attribute debe tener entre 8 y 50 caracteres.',
+            'confirmed' => 'El campo :attribute debe ser confirmada.',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors()->all();
+            return $this->error("Error al actualizar la password", $errors);
+        }
+
+        $user = User::where('id', $idUser)->first();
+        
+        $tz = config('app.timezone');
+        $now = Carbon::now($tz);
+        $now->format('Y-m-d H:i:s');
+        $request['contrasena'] = Hash::make($request['contrasena']);
+        
+        $user->contrasena = $request->contrasena;
+        $user->correo_verificado = $now;
+        $user->save();
+
+        $resource = new UserResource($user);
+
+        return $this->success('Usuario registrado correctamente.', [
+            'usuario' => $resource
+        ]);
+    }
 }

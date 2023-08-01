@@ -70,7 +70,7 @@ Route::group([
     Route::post('signup', [UserController::class, 'register']);
     Route::post('login', [UserController::class, 'login']);
     Route::post('updatePassword/{idUser}', [UserController::class, 'updatePassword']);
-    Route::post('recuperarPassword/', [UserController::class, 'recoveryPassword']);
+    Route::post('recuperarPassword', [UserController::class, 'recoveryPassword']);
     /* Route::post('activarCuenta', [UserController::class, 'activateAcount']);
     Route::post('loginFallido', [UserController::class, 'registerFailAuth']); */
     //
