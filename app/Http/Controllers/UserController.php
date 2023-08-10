@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\UserResource;
 use App\Http\Requests\AuthenticatedSessionRequest;
 use App\Http\Resources\AuthResource;
+use App\Mail\RecoverPassword;
 use App\Mail\RegisterUser;
 use App\Traits\ApiResponder;
 use Carbon\Carbon;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\PersonalAccessToken;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -45,7 +47,6 @@ class UserController extends Controller
             'usuario' => 'required|string|max:50|unique:usuarios',
             'correo' => 'required|string|email|max:255|unique:usuarios',
             'rol' => 'required|numeric|min:1',
-            'contrasena' => 'required|string|between:8,50|confirmed',
         ];
 
         $validator = Validator::make( $request->all(), $rules, $messages = [
@@ -308,5 +309,42 @@ class UserController extends Controller
         return $this->success('Usuario registrado correctamente.', [
             'usuario' => $resource
         ]);
+    }
+
+    # Crear función para recuperar password a partir del paramétro de email
+    public function recoveryPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'correo' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors()->all();
+            return $this->error("Error al actualizar la password", $errors);
+        }
+
+        $user = User::where('correo', $request->correo)->first();
+
+        if (!$user) {
+            return $this->error("No se encontró un usuario con ese correo electrónico.");
+        }
+
+        // Generar una nueva contraseña aleatoria
+        $newPassword = Str::random(10); 
+
+        // Actualizar la contraseña del usuario en la base de datos
+        $user->contrasena = Hash::make($newPassword);
+        $user->save();
+
+        $registedData = [
+            'name'      => $user->nombre,
+            'email'     => $user->correo,
+            'password'  => $newPassword
+        ];
+
+        // Enviar la nueva contraseña por correo electrónico
+        Mail::to($user->correo)->send(new RecoverPassword($registedData));
+
+        return $this->success("Se ha enviado una nueva contraseña al correo electrónico proporcionado.");
     }
 }
