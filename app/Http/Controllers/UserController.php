@@ -204,23 +204,22 @@ class UserController extends Controller
     public function login(AuthenticatedSessionRequest $request)
     {
         $user = User::firstWhere('usuario', request('usuario'));
+        
         $tokenName = null;
         $tz = config('app.timezone');
         $now = Carbon::now($tz);
         $minutesToAdd = config('sanctum.expiration');
+
         if (isset($user->id)) {
             $tokenName = 'user_auth_token' . $now->format('YmdHis');
         } else {
-            return $this->error("Estas credenciales no coinciden con nuestros registros.");
+            return $this->error("Estas credenciales no coinciden con nuestros registros.", code:400);
         }
 
         if (Hash::check(request('password'), $user->contrasena)) {
             
             if ($user->tokens()->where('expires_at', '>', $now->format('Y-m-d H:i:s'))->count() > 0) {
-                
-                throw ValidationException::withMessages([
-                    'account' => 'Actualmente tiene una sesión activa.'
-                ]);
+                return $this->error("Actualmente tiene una sesión activa.", code:401);
             }
             
             // Comenzamos con la transacción en la base de datos
@@ -243,10 +242,10 @@ class UserController extends Controller
                 ]);
             } catch (\Exception $e) {
                 DB::rollback();
-                return $this->error("Error al iniciir sesión, error:{$e->getMessage()}.");
+                return $this->error("Error al iniciar sesión, error:{$e->getMessage()}.",code:402);
             }
         } else {
-            return $this->error("No matchea las passowrds");
+            return $this->error("Error al iniciar sesión, revise sus credenciales", code:403);
         }
     }
 
@@ -331,11 +330,12 @@ class UserController extends Controller
 
         // Generar una nueva contraseña aleatoria
         $newPassword = Str::random(10); 
+        $hash_password = Hash::make($newPassword);
 
         // Actualizar la contraseña del usuario en la base de datos
-        $user->contrasena = Hash::make($newPassword);
+        $user->contrasena = $hash_password;
         $user->save();
-
+        
         $registedData = [
             'name'      => $user->nombre,
             'email'     => $user->correo,
