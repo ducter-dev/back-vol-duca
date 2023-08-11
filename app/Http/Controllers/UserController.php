@@ -12,8 +12,10 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\UserResource;
 use App\Http\Requests\AuthenticatedSessionRequest;
 use App\Http\Resources\AuthResource;
+use App\Http\Resources\BloqueadoResource;
 use App\Mail\RecoverPassword;
 use App\Mail\RegisterUser;
+use App\Models\Bloqueado;
 use App\Models\Caducidad;
 use App\Traits\ApiResponder;
 use Carbon\Carbon;
@@ -432,8 +434,6 @@ class UserController extends Controller
         return $link;
     }
 
-    
-
     public function desencriptarLink($token)
     {
         $key = config('app.key_encript');
@@ -441,5 +441,34 @@ class UserController extends Controller
         $result = str_replace($key, "", $desencriptado);
         $parts = explode(":", $result);
         return $parts[1];
+    }
+
+    public function bloquearUsuario(Request $request)
+    {
+        try {
+            $user = User::where('usuario', $request->usuario)->first();
+        
+            if ($user == null) {
+                return $this->error("Error, NO se encontró el usuario.");
+            }
+
+            $fecha_bloqueo = date('Y-m-d H:i:s');
+            $fecha_desbloqueo = strtotime('+15 minutes', strtotime($fecha_bloqueo));
+            $fecha_desbloqueo = date('Y-m-d H:i:s', $fecha_desbloqueo);
+            $bloqueo = new Bloqueado();
+            $bloqueo->fecha_bloqueo = $fecha_bloqueo;
+            $bloqueo->fecha_desbloqueo = $fecha_desbloqueo;
+            $bloqueo->usuario_id = $user->id;
+            $bloqueo->save();
+
+            $resource = new BloqueadoResource($bloqueo);
+
+            return $this->success('Usuario bloqueado correctamente.', [
+                'bloqueo' => $resource
+            ]);
+        } catch (\Throwable $th) {
+            return $this->error($th);
+        }
+        
     }
 }

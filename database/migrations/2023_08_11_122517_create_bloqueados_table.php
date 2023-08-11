@@ -13,14 +13,13 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('caducidades', function (Blueprint $table) {
+        Schema::create('bloqueados', function (Blueprint $table) {
             $table->id();
-            $table->string('contrasena');
-            $table->timestamp('caducidad');
-            $table->integer('estado');
             $table->foreignId('usuario_id')->constrained()
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
+            $table->dateTime('fecha_bloqueo');
+            $table->dateTime('fecha_desbloqueo');
             $table->timestamps();
         });
     }
@@ -32,9 +31,9 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('caducidades', function (Blueprint $table) {
+        Schema::table('bloqueados', function (Blueprint $table) {
             $table->dropForeign(['usuario_id']);
         });
-        Schema::dropIfExists('caducidades');
+        Schema::dropIfExists('bloqueados');
     }
 };
