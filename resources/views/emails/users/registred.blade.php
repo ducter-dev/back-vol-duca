@@ -5,7 +5,7 @@
 
 {{__('Sus credenciales de acceso son las siguientes')}}:
 
-**{{__('Correo electrónico')}}:** {{ $data['email'] }}
+**{{__('Usuario')}}:** {{ $data['usuario'] }}
 
 **{{__('Contraseña')}}:** {{ $data['password']  }}
 

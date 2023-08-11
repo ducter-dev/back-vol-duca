@@ -98,6 +98,7 @@ class UserController extends Controller
         $registedData = [
             'name'      => $user->nombre,
             'email'     => $user->correo,
+            'usuario'     => $user->usuario,
             'password'  => $passwordPlain,
             'link_activate_count' => $this->generarLinkActivarCuenta($user->id)
         ];
@@ -236,7 +237,18 @@ class UserController extends Controller
             if ($user->tokens()->where('expires_at', '>', $now->format('Y-m-d H:i:s'))->count() > 0) {
                 return $this->error("Actualmente tiene una sesión activa.", code:401);
             }
+
             
+            /* Verificamos que el usuario tenga la cuenta verificada */
+            if (is_null($user->correo_verificado))
+            {
+                return $this->error("La cuenta no se encuentra verificada, revise su correo electrónico para activarla.", code:401);
+            }
+
+            /* Verificamos que la contraseña no esté caducada */
+
+            /* Verificamos que el usuario no esté bloqueado */
+
             // Comenzamos con la transacción en la base de datos
             DB::beginTransaction();
             try {
@@ -257,10 +269,10 @@ class UserController extends Controller
                 ]);
             } catch (\Exception $e) {
                 DB::rollback();
-                return $this->error("Error al iniciar sesión, error:{$e->getMessage()}.",code:402);
+                return $this->error("Error al iniciar sesión, error:{$e->getMessage()}.",code:400);
             }
         } else {
-            return $this->error("Error al iniciar sesión, revise sus credenciales", code:403);
+            return $this->error("Error al iniciar sesión, revise sus credenciales", code:400);
         }
     }
 
