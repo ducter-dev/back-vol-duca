@@ -14,6 +14,7 @@ use App\Http\Requests\AuthenticatedSessionRequest;
 use App\Http\Resources\AuthResource;
 use App\Mail\RecoverPassword;
 use App\Mail\RegisterUser;
+use App\Models\Caducidad;
 use App\Traits\ApiResponder;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -65,8 +66,9 @@ class UserController extends Controller
             $errors = $validator->errors()->all();
             return $this->error("Error al insertar el registro", $errors);
         }
-        $passwordPlain = $request['contrasena'];
-        $request['contrasena'] = Hash::make($request['contrasena']);
+        // Generar una nueva contraseña aleatoria
+        $passwordPlain = Str::random(10);
+        $hash_password = Hash::make($passwordPlain);
         $role = $request->rol;
         $user = new User();
         $user->nombre = $request->nombre;
@@ -74,17 +76,31 @@ class UserController extends Controller
         #$user->perfil_id = $request->perfil_id;
         #$user->empresa_id = $request->empresa_id;
         $user->correo= $request->correo;
-        $user->contrasena = $request->contrasena;
+        $user->contrasena = $hash_password;
         #$user->estado = $request->estado;
         $user->save();
         $user->assignRole($role);
 
+        $hoy = date('Y-m-d H:i:s');
+        $caducidad = strtotime('+2 months', strtotime($hoy));
+        $caducidad = date('Y-m-d H:i:s', $caducidad);
+
+        $contraUser = new Caducidad();
+        $contraUser->contrasena = $user->contrasena;
+        $contraUser->caducidad = $caducidad;
+        $contraUser->estado = 1;
+        $user->caducidades()->save($contraUser);
+
         $resource = new UserResource($user);
+        
+        // Falta crear link de activación de cuenta
 
         $registedData = [
             'name'      => $user->nombre,
             'email'     => $user->correo,
-            'password'  => $passwordPlain
+            'usuario'     => $user->usuario,
+            'password'  => $passwordPlain,
+            'link_activate_count' => $this->generarLinkActivarCuenta($user->id)
         ];
 
         Mail::to($user->correo)->send(new RegisterUser($registedData));
@@ -208,6 +224,7 @@ class UserController extends Controller
         $tokenName = null;
         $tz = config('app.timezone');
         $now = Carbon::now($tz);
+        $ahora = $now->format('Y-m-d H:i:s');
         $minutesToAdd = config('sanctum.expiration');
 
         if (isset($user->id)) {
@@ -218,10 +235,31 @@ class UserController extends Controller
 
         if (Hash::check(request('password'), $user->contrasena)) {
             
-            if ($user->tokens()->where('expires_at', '>', $now->format('Y-m-d H:i:s'))->count() > 0) {
+            if ($user->tokens()->where('expires_at', '>', $ahora)->count() > 0) {
                 return $this->error("Actualmente tiene una sesión activa.", code:401);
             }
+
             
+            /* Verificamos que el usuario tenga la cuenta verificada */
+            if (is_null($user->correo_verificado))
+            {
+                return $this->error("La cuenta no se encuentra verificada, revise su correo electrónico para activarla.", code:401);
+            }
+
+            /* Verificamos que la contraseña no esté caducada */
+            $caducidad = Caducidad::where('usuario_id', $user->id)->first();
+            $fecha_caducidad = Carbon::parse($caducidad->caducidad);
+            $ahora = Carbon::parse($ahora);
+
+            if ($ahora->greaterThan($fecha_caducidad))
+            {
+                return $this->error("La contraseña ha caducado, debe generar una nueva.", code:402);
+            }
+            
+
+            
+            /* Verificamos que el usuario no esté bloqueado */
+
             // Comenzamos con la transacción en la base de datos
             DB::beginTransaction();
             try {
@@ -242,10 +280,10 @@ class UserController extends Controller
                 ]);
             } catch (\Exception $e) {
                 DB::rollback();
-                return $this->error("Error al iniciar sesión, error:{$e->getMessage()}.",code:402);
+                return $this->error("Error al iniciar sesión, error:{$e->getMessage()}.",code:401);
             }
         } else {
-            return $this->error("Error al iniciar sesión, revise sus credenciales", code:403);
+            return $this->error("Error al iniciar sesión, revise sus credenciales", code:400);
         }
     }
 
@@ -329,7 +367,7 @@ class UserController extends Controller
         }
 
         // Generar una nueva contraseña aleatoria
-        $newPassword = Str::random(10); 
+        $newPassword = Str::random(10);
         $hash_password = Hash::make($newPassword);
 
         // Actualizar la contraseña del usuario en la base de datos
@@ -346,5 +384,62 @@ class UserController extends Controller
         Mail::to($user->correo)->send(new RecoverPassword($registedData));
 
         return $this->success("Se ha enviado una nueva contraseña al correo electrónico proporcionado.");
+    }
+
+    public function activarCuenta($token)
+    {
+        try {
+            # Llamamos a la función que desencripte el token para obtener el id del usuario
+            $idUsuario = $this->desencriptarLink($token);
+            $idUsuario = intval($idUsuario);
+
+            # Ya con el id, buscamos el usuario y lo activamos
+            $user = User::where('id', $idUsuario)->first();
+            
+            # Si no lo encontramos, lanzamos el error
+            if ($user == null) {
+                return $this->error("Error, NO se encontró el registro.");
+            }
+            # Si lo encontramos seguimos el proceso
+            $tz = config('app.timezone');
+            $now = Carbon::now($tz);
+            $now->format('Y-m-d H:i:s');
+            $user->correo_verificado = $now;
+            $user->save();
+    
+            # Retornar el mensaje de cuenta activada
+            return view('activated');
+
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+    }
+
+    public function generarLinkActivarCuenta($idUser)
+    {
+        $url = config('app.url');
+        $key = config('app.key_encript');
+        // Generar un token único
+        $token = Str::random(32);
+
+        $mensaje = "$token:$idUser";
+
+        // Encriptar el token
+        $encriptedToken = base64_encode($mensaje . $key);
+
+        // Crear el enlace con el token encriptado
+        $link = $url . "/api/users/activar-cuenta/" . urlencode($encriptedToken);
+        return $link;
+    }
+
+    
+
+    public function desencriptarLink($token)
+    {
+        $key = config('app.key_encript');
+        $desencriptado = base64_decode(urldecode($token));
+        $result = str_replace($key, "", $desencriptado);
+        $parts = explode(":", $result);
+        return $parts[1];
     }
 }

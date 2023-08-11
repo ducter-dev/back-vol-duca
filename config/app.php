@@ -56,6 +56,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'url_front' => env('APP_FRONT_URL'),
+
     'asset_url' => env('ASSET_URL'),
 
     /*
@@ -124,6 +126,8 @@ return [
     'key' => env('APP_KEY'),
 
     'cipher' => 'AES-256-CBC',
+
+    'key_encript' => env('KEY_ENCRIPT'),
 
     /*
     |--------------------------------------------------------------------------

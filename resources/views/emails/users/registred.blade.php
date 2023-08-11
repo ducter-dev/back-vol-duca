@@ -5,11 +5,12 @@
 
 {{__('Sus credenciales de acceso son las siguientes')}}:
 
-**{{__('Correo electrónico')}}:** {{ $data['email'] }}
+**{{__('Usuario')}}:** {{ $data['usuario'] }}
 
 **{{__('Contraseña')}}:** {{ $data['password']  }}
 
-<x-mail::button :url="config('redirections.login')">
-Acceder
-</x-mail::button>
+@component('mail::button', ['url' => $data['link_activate_count']])
+Activar cuenta
+@endcomponent
+
 </x-mail::message>
