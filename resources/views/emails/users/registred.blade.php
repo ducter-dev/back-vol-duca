@@ -9,7 +9,8 @@
 
 **{{__('Contraseña')}}:** {{ $data['password']  }}
 
-<x-mail::button :url="config('redirections.login')">
-Acceder
-</x-mail::button>
+@component('mail::button', ['url' => $data['link_activate_count']])
+Activar cuenta
+@endcomponent
+
 </x-mail::message>

@@ -66,4 +66,9 @@ class User extends Authenticatable
             return $role->permissions;
         })->collapse()->pluck('description')->unique();
     }
+
+    public function caducidades()
+    {
+        return $this->hasMany(Caducidad::class, 'usuario_id');
+    }
 }
