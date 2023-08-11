@@ -275,7 +275,7 @@ class UserController extends Controller
                 $resource = new AuthResource($user);
                 
                 DB::commit();
-                return $this->success('Inicio de sesión exitoso.', [
+                return $this->success("Inicio de sesión exitoso. Bienvenido {$user->nombre}.", [
                     'user' => $resource
                 ]);
             } catch (\Exception $e) {
