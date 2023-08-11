@@ -256,8 +256,6 @@ class UserController extends Controller
                 return $this->error("La contraseña ha caducado, debe generar una nueva.", code:402);
             }
             
-
-            
             /* Verificamos que el usuario no esté bloqueado */
 
             // Comenzamos con la transacción en la base de datos
@@ -275,7 +273,7 @@ class UserController extends Controller
                 $resource = new AuthResource($user);
                 
                 DB::commit();
-                return $this->success('Inicio de sesión exitoso.', [
+                return $this->success("Inicio de sesión exitoso. Bienvenido {$user->nombre}", [
                     'user' => $resource
                 ]);
             } catch (\Exception $e) {
