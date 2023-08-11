@@ -258,9 +258,15 @@ class UserController extends Controller
                 return $this->error("La contraseña ha caducado, debe generar una nueva.", code:402);
             }
             
-
-            
             /* Verificamos que el usuario no esté bloqueado */
+            $bloqueo = Bloqueado::where('usuario_id', $user->id)->first();
+            $fecha_desbloqueo = Carbon::parse($bloqueo->fecha_desbloqueo);
+
+            if ($ahora->lessThan($fecha_desbloqueo))
+            {
+                return $this->error("Usuario bloqueado hasta $bloqueo->fecha_desbloqueo.", code:403);
+            }
+
 
             // Comenzamos con la transacción en la base de datos
             DB::beginTransaction();
@@ -450,6 +456,11 @@ class UserController extends Controller
         
             if ($user == null) {
                 return $this->error("Error, NO se encontró el usuario.");
+            }
+
+            $bloqueos = Bloqueado::where('usuario_id', $user->id)->get();
+            foreach ($bloqueos as $bloqueo) {
+                $bloqueo->delete();
             }
 
             $fecha_bloqueo = date('Y-m-d H:i:s');
