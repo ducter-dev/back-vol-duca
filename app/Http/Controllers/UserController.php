@@ -224,6 +224,7 @@ class UserController extends Controller
         $tokenName = null;
         $tz = config('app.timezone');
         $now = Carbon::now($tz);
+        $ahora = $now->format('Y-m-d H:i:s');
         $minutesToAdd = config('sanctum.expiration');
 
         if (isset($user->id)) {
@@ -234,7 +235,7 @@ class UserController extends Controller
 
         if (Hash::check(request('password'), $user->contrasena)) {
             
-            if ($user->tokens()->where('expires_at', '>', $now->format('Y-m-d H:i:s'))->count() > 0) {
+            if ($user->tokens()->where('expires_at', '>', $ahora)->count() > 0) {
                 return $this->error("Actualmente tiene una sesión activa.", code:401);
             }
 
@@ -246,7 +247,17 @@ class UserController extends Controller
             }
 
             /* Verificamos que la contraseña no esté caducada */
+            $caducidad = Caducidad::where('usuario_id', $user->id)->first();
+            $fecha_caducidad = Carbon::parse($caducidad->caducidad);
+            $ahora = Carbon::parse($ahora);
 
+            if ($ahora->greaterThan($fecha_caducidad))
+            {
+                return $this->error("La contraseña ha caducado, debe generar una nueva.", code:402);
+            }
+            
+
+            
             /* Verificamos que el usuario no esté bloqueado */
 
             // Comenzamos con la transacción en la base de datos
@@ -269,7 +280,7 @@ class UserController extends Controller
                 ]);
             } catch (\Exception $e) {
                 DB::rollback();
-                return $this->error("Error al iniciar sesión, error:{$e->getMessage()}.",code:400);
+                return $this->error("Error al iniciar sesión, error:{$e->getMessage()}.",code:401);
             }
         } else {
             return $this->error("Error al iniciar sesión, revise sus credenciales", code:400);
