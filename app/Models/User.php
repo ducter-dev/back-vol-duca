@@ -71,4 +71,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Caducidad::class, 'usuario_id');
     }
+
+    public function bloqueados()
+    {
+        return $this->hasMany(Bloqueado::class, 'usuario_id');
+    }
 }

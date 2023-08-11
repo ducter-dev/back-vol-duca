@@ -72,6 +72,7 @@ Route::group([
     Route::post('updatePassword/{idUser}', [UserController::class, 'updatePassword']);
     Route::post('recuperarPassword', [UserController::class, 'recoveryPassword']);
     Route::get('activar-cuenta/{token}', [UserController::class, 'activarCuenta']);
+    Route::post('bloquear-usuario', [UserController::class, 'bloquearUsuario']);
     /* Route::post('activarCuenta', [UserController::class, 'activateAcount']);
     Route::post('loginFallido', [UserController::class, 'registerFailAuth']); */
     //
