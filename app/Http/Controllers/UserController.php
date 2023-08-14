@@ -14,6 +14,7 @@ use App\Http\Requests\AuthenticatedSessionRequest;
 use App\Http\Resources\AuthResource;
 use App\Http\Resources\BloqueadoResource;
 use App\Mail\RecoverPassword;
+use App\Mail\UpdatePassword;
 use App\Mail\RegisterUser;
 use App\Models\Bloqueado;
 use App\Models\Caducidad;
@@ -75,11 +76,8 @@ class UserController extends Controller
         $user = new User();
         $user->nombre = $request->nombre;
         $user->usuario = $request->usuario;
-        #$user->perfil_id = $request->perfil_id;
-        #$user->empresa_id = $request->empresa_id;
         $user->correo= $request->correo;
         $user->contrasena = $hash_password;
-        #$user->estado = $request->estado;
         $user->save();
         $user->assignRole($role);
 
@@ -140,9 +138,6 @@ class UserController extends Controller
                 'usuario' => 'required|string|max:50',
                 'correo' => 'required|string|email|max:255|',
                 'rol' => 'required|numeric|min:1',
-                /* 'perfil_id' => 'required|numeric|min:1',
-                'empresa_id' => 'required|numeric|min:1',
-                'estado' => 'required|numeric|min:1', */
             ];
     
             $validator = Validator::make( $request->all(), $rules, $messages = [
@@ -171,9 +166,6 @@ class UserController extends Controller
             $user->nombre = $request->nombre;
             $user->usuario = $request->usuario;
             $user->correo= $request->correo;
-            /* $user->perfil_id = $request->perfil_id;
-            $user->empresa_id = $request->empresa_id;
-            $user->estado = $request->estado; */
             $user->save();
             $roles = $user->roles;
 
@@ -184,9 +176,7 @@ class UserController extends Controller
             
             $resource = new UserResource($user);
 
-            return $this->success('Registro actualizado correctamente.', [
-                'usuario' => $resource
-            ]);
+            return $this->success('Registro actualizado correctamente.', code:201);
 
         } catch (\Throwable $th) {
             return response()->json($th->getMessage(), 501);
@@ -315,9 +305,10 @@ class UserController extends Controller
         return 'usuario';
     }
 
-    public function updatePassword(Request $request, $idUser)
+    public function updatePassword(Request $request)
     {
         $rules = [
+            'usuario' => 'required|numeric|min:1',
             'contrasena' => 'required|string|between:8,50|confirmed',
         ];
 
@@ -338,20 +329,45 @@ class UserController extends Controller
             return $this->error("Error al actualizar la password", $errors);
         }
 
+        $idUser = $request['usuario'];
+
         $user = User::where('id', $idUser)->first();
+
+        if (!$user) {
+            return $this->error("No se encontró un usuario con esos registros.");
+        }
         
-        $tz = config('app.timezone');
-        $now = Carbon::now($tz);
-        $now->format('Y-m-d H:i:s');
-        $request['contrasena'] = Hash::make($request['contrasena']);
+        #   Hashear la password del request
+        $password_hashed = Hash::make($request['contrasena']);
         
-        $user->contrasena = $request->contrasena;
-        $user->correo_verificado = $now;
+        #   Actualizar la contraseña del usuario en la base de datos
+        $user->contrasena = $password_hashed;
         $user->save();
+
+        #   Agregar la password a las caducidades
+        $hoy = date('Y-m-d H:i:s');
+        $caducidad = strtotime('+2 months', strtotime($hoy));
+        $caducidad = date('Y-m-d H:i:s', $caducidad);
+
+        $contraUser = new Caducidad();
+        $contraUser->contrasena = $user->contrasena;
+        $contraUser->caducidad = $caducidad;
+        $contraUser->estado = 1;
+        $user->caducidades()->save($contraUser);
+
+        $registedData = [
+            'name'      => $user->nombre,
+            'email'     => $user->correo,
+            'usuario'     => $user->usuario,
+            'password'  => $request['contrasena']
+        ];
 
         $resource = new UserResource($user);
 
-        return $this->success('Usuario registrado correctamente.', [
+        // Enviar la nueva contraseña por correo electrónico
+        Mail::to($user->correo)->send(new updatePassword($registedData));
+
+        return $this->success('Contraseña actualizada.', [
             'usuario' => $resource
         ]);
     }
@@ -385,6 +401,7 @@ class UserController extends Controller
         $registedData = [
             'name'      => $user->nombre,
             'email'     => $user->correo,
+            'usuario'     => $user->usuario,
             'password'  => $newPassword
         ];
 
