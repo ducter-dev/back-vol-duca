@@ -1,7 +1,8 @@
 <x-mail::message>
-# {{__('Bienvenido: ')}} {{ $data['name'] }}
+# {{__('Hola: ')}} {{ $data['name'] }}
+*{{__('Sus credenciales de acceso han cambiado.')}}*
 
-{{__('Sus credenciales de acceso son las siguientes')}}:
+{{__('Sus credenciales son las siguientes')}}:
 
 **{{__('Usuario')}}:** {{ $data['usuario'] }}
 
