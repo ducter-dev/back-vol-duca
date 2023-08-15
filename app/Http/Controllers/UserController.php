@@ -239,13 +239,13 @@ class UserController extends Controller
             }
 
             /* Verificamos que la contraseña no esté caducada */
-            $caducidad = Caducidad::where('usuario_id', $user->id)->first();
+            $caducidad = Caducidad::where('usuario_id', $user->id)->where('estado', 1)->first();
             $fecha_caducidad = Carbon::parse($caducidad->caducidad);
             $ahora = Carbon::parse($ahora);
 
             if ($ahora->greaterThan($fecha_caducidad))
             {
-                return $this->error("La contraseña ha caducado, debe generar una nueva.", code:402);
+                return $this->error("La contraseña ha caducado, debe generar una nueva.", code:402, data: $user->id);
             }
             
             /* Verificamos que el usuario no esté bloqueado */
@@ -343,6 +343,15 @@ class UserController extends Controller
         #   Actualizar la contraseña del usuario en la base de datos
         $user->contrasena = $password_hashed;
         $user->save();
+
+
+        #   Cambiar el estatus de las caducidades anteriores
+        $caducidades = Caducidad::where('usuario_id', $user->id)->get();
+
+        foreach ($caducidades as $cad) {
+            $cad->estado = 2;
+            $cad->save();
+        }
 
         #   Agregar la password a las caducidades
         $hoy = date('Y-m-d H:i:s');

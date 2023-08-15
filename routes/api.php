@@ -73,15 +73,12 @@ Route::group([
     Route::post('recuperarPassword', [UserController::class, 'recoveryPassword']);
     Route::get('activar-cuenta/{token}', [UserController::class, 'activarCuenta']);
     Route::post('bloquear-usuario', [UserController::class, 'bloquearUsuario']);
-    /* Route::post('activarCuenta', [UserController::class, 'activateAcount']);
-    Route::post('loginFallido', [UserController::class, 'registerFailAuth']); */
-    //
+    Route::post('updatePassword', [UserController::class, 'updatePassword']);
 
     // Access only for logged in users
     Route::group([
         'middleware' => 'auth:sanctum'
     ], function() {
-        Route::post('updatePassword', [UserController::class, 'updatePassword']);
         Route::put('/{id}', [UserController::class, 'update']);
         Route::delete('delete/{id}', [UserController::class, 'destroy']);
         Route::get('/', [UserController::class, 'index']);
