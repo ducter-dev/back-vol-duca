@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use App\Models\Balance;
 use App\Models\Entrada;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ObtenerEntradas extends Command
 {
@@ -31,6 +32,7 @@ class ObtenerEntradas extends Command
      */
     public function handle()
     {
+        DB::beginTransaction();
         try {
             $tz = config('app.timezone');
             $now = Carbon::now($tz);
@@ -61,14 +63,19 @@ class ObtenerEntradas extends Command
                     $entrada->fecha_hora = $item->fecha_hora_fin;
                     $entrada->valor = $item->valor;
                     $entrada->save();
-                    $this->info("\e[93mSe registró la entrada de Gas de la fecha \e[96m$$item->fecha_hora_fin \e[39m✔ \n");
-    
+                    $this->info("✔ Se registró la entrada de Gas de la fecha $$item->fecha_hora_fin");
                 }
+                DB::commit();
+                Log::info("✔ Registros guardado correctamente de fecha: {$lastDay}.");
+                return $this->info("✔ Registros guardado correctamente de fecha: {$lastDay}.");
             } else {
-                $this->info("\e[91m!No existen salidas para la fecha \e[96$lastDay! \e[39m😔\n") ;
+                $this->info("!No existen entradas para la fecha $lastDay!") ;
+                Log::critical("!No existen entradas para la fecha $lastDay!");
             }
-        } catch (\Throwable $th) {
-            $this->info("\e[91mError al registrar entradas.\n");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage());
+            $this->info("Error al registrar entradas: {$e->getMessage()}.");
         }
     }
 }

@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use App\Models\Balance;
 use App\Models\Salida;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ObtenerSalidas extends Command
 {
@@ -31,6 +32,7 @@ class ObtenerSalidas extends Command
      */
     public function handle()
     {
+        DB::beginTransaction();
         try {
             $tz = config('app.timezone');
             $now = Carbon::now($tz);
@@ -38,17 +40,9 @@ class ObtenerSalidas extends Command
             # Obtener  la fecha anterior e insertar el balance
             $lastDay = $now->subDay(1);
             $lastDay = $lastDay->format('Y-m-d');
-            $balanceTPA = 0;
             
             /* Obtener el balance de duca */
             $balance = Balance::where('fecha', $lastDay)->first();
-            
-            /* Obtener el balance de tpa */
-            $balanceTPA = DB::connection('mysqlTPA')->table('balances')
-                        ->select()
-                        ->whereRaw("fecha = ?", [$lastDay])
-                        ->first();
-                        
             
             /* Obtener las salidas del ducto EB00 */
             $salidasIRGE = DB::connection('mysqlIRGE')->table('entrada')
@@ -73,14 +67,19 @@ class ObtenerSalidas extends Command
                     $salida->cliente = $item->compania;
                     $salida->densidad = $item->densidad;
                     $salida->save();
-                    $this->info("\e[93mSe registró la salida de Gas  \e[96m$$item->pg \e[93mLlenadera \e[96m$item->llenadera_llenado \e[39m✔ \n");
-    
+                    $this->info("✔ Se registró la salida de Gas  $$item->pg Llenadera $item->llenadera_llenado");
                 }
+                DB::commit();
+                Log::info("✔ Se registraron las salidas de Gas");
+                return $this->info("✔ Se registraron las salidas de Gas");
             } else {
-                $this->info("\e[91m!No existen salidas para la fecha \e[96$lastDay! \e[39m😔\n") ;
+                $this->info("!No existen salidas para la fecha $lastDay!") ;
+                Log::critical("!No existen salidas para la fecha $lastDay!");
             }
-        } catch (\Throwable $th) {
-            $this->info("\e[91mError al registrar salidas.\n");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage());
+            $this->info("Error al registrar salidas {$e->getMessage()}.");
         }
     }
 }
