@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Carbon\Carbon;
 use App\Models\Balance;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CrearBalance extends Command
 {
@@ -29,6 +31,7 @@ class CrearBalance extends Command
      */
     public function handle()
     {
+        DB::beginTransaction();
         try {
             $tz = config('app.timezone');
             $now = Carbon::now($tz);
@@ -37,7 +40,7 @@ class CrearBalance extends Command
             $lastDay = $lastDay->format('Y-m-d');
             
             $balance = Balance::where('fecha', $lastDay)->first();
-    
+            
             if ($balance == '') {
                 $balanceCreated = Balance::create(
                     [
@@ -47,11 +50,15 @@ class CrearBalance extends Command
                         'inventarioInicial' => 0
                     ]
                 );
-                $this->info("Balance creado.");
+                DB::commit();
+                Log::info("✔ Balance creado: {$balanceCreated->fecha}.");
+                return $this->info("✔ Balance creado: {$balanceCreated->fecha}.");
             }
             
-        } catch (\Throwable $th) {
-            $this->info("Error al crear balance diario.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage());
+            $this->error("Error al crear balance diario: {$e->getMessage()}.");
         }
     }
 }
