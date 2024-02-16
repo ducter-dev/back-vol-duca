@@ -259,13 +259,13 @@ class EmpresaController extends Controller
             $fechaHoraCorteAntDT = new DateTime($fechaHoraCorteAntStr . " 05:00:00", new DateTimeZone('America/Mexico_City'));
             $fechaHoraCorteAnt = $fechaHoraCorteAntDT->format(DateTime::ATOM);
 
-            
             $totalVentasIrge_DB = DB::table('balances_duca.salidas')
-                    ->select(DB::raw('SUM(valor) AS masa'))
-                    ->whereRaw("balance_id = ? AND tipo = ?", [$balance->id, 'l'])
-                    ->get();
-
+                ->select(DB::raw('SUM(valor) AS masa'))
+                ->whereRaw("balance_id = ? AND tipo = ?", [$balance->id, 'l'])
+                ->get();
+                
             $totalVentasIrge = $totalVentasIrge_DB[0]->masa;
+            #dd($totalVentasIrge);
             
 
             $ventasIrge = DB::table('balances_duca.salidas')
@@ -286,10 +286,11 @@ class EmpresaController extends Controller
                 );
                 array_push($clientesVentas, $raw);
             }
-
+            
 
             /* Obtener el dictamen que se usará */
             $dictamenes = $balance->dictamenes;
+            #dd($dictamenes);
 
             if (count($dictamenes) < 1) {
                 $bitacora = new Bitacora();
@@ -301,7 +302,7 @@ class EmpresaController extends Controller
                 $bitacora->descripcion3 = 'fecha ' . $fechaBalance;
                 $bitacora->usuario_id = $request->user()->id;
                 $bitacora->save();
-                $bitacora->load('user');
+                $bitacora->load('usuario');
                 $bitacora->load('evento');
                 $this->error("No se han creado dictámenes para el día " . $fechaBalance);
             }
@@ -312,7 +313,6 @@ class EmpresaController extends Controller
                 ->whereRaw('balance_id = ?', [$balance->id])
                 ->first();
             $volRecibido = is_null($recepcionGas->recibido) ? 0 : $recepcionGas->recibido;
-
             
             if (count($dictamenes) == 2) {
                 /* Listar los dictámenes */
@@ -996,7 +996,6 @@ class EmpresaController extends Controller
             } else {
                 $dictamenes->load('cliente');
                 $dictamenes->load('recibos');
-
                 $recibosGas = [];
                 $numEntregas = 0;
                 $sumaEntregas = 0;
@@ -1036,7 +1035,6 @@ class EmpresaController extends Controller
 
                 $reciboTot = 0;
                 $volEntregadoLlenadera = is_null($entregaLlenadera->recibido) ? 0 : $entregaLlenadera->recibido;
-                #dd($volEntregadoLlenadera);
                 $volEntregado = $volEntregadoLlenadera;
 
                 if ($numRecibos > 0 ) {
@@ -1527,7 +1525,6 @@ class EmpresaController extends Controller
                 
                 $salidas = Salida::where('balance_id', $balance->id)->where('tipo', 'l')->orderBy('id', 'asc')->get();
                 $salidas->load('compania');
-                #dd($salidas);
                 
                 $totalSalidasEntregas = 0;
                 
@@ -1716,7 +1713,7 @@ class EmpresaController extends Controller
                 $rowBitacora = [
                     "NumeroRegistro" => $numRegistro,
                     "FechaYHoraEvento" => $bitacora->fecha_hora,
-                    "UsuarioResponsable" => $bitacora->user->usuario,
+                    "UsuarioResponsable" => $bitacora->usuario->usuario,
                     "TipoEvento" => $bitacora->evento->id,
                     "DescripcionEvento" => $bitacora->descripcion1 . $bitacora->descripcion2 . $bitacora->descripcion3,
                 ];
@@ -1724,10 +1721,11 @@ class EmpresaController extends Controller
             }
 
             $prodArray = [];
+            
             $productoData = [
                 'ClaveProducto' => $productoOmision->clave,
-                'ComposDePropanoEnGasLP' => $propano->porcentaje->porcentaje,
-                'ComposDeButanoEnGasLP' => $butano->porcentaje->porcentaje,
+                'ComposDePropanoEnGasLP' => $propano->porcentajes->porcentaje,
+                'ComposDeButanoEnGasLP' => $butano->porcentajes->porcentaje,
                 'Ducto' => $ductoArray
             ];
 
@@ -1828,7 +1826,6 @@ class EmpresaController extends Controller
                             $archivoInBD->save();
                         }
                     }
-
                     $archivo = new Archivo();
                     $archivo->nombre = $fileNameJson;
                     $archivo->ruta = Storage::url($zipFolder) . $fileNameZip;
