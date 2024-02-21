@@ -11,6 +11,7 @@ use App\Models\Dictamen;
 use App\Models\Entrada;
 use App\Models\Salida;
 use App\Models\Archivo;
+use App\Models\ArchivoMensual;
 use App\Models\Recibo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -19,6 +20,8 @@ use DateTime;
 use DateTimeZone;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use ZipArchive;
 
 class EmpresaController extends Controller
@@ -216,15 +219,21 @@ class EmpresaController extends Controller
         }
     }
 
-    public function crearJsonV1 ($idEmpresa, $fechaBalance, $tipo, $unidad, Request $request) {
+    public function crearJsonV1 (Request $request) {
 
         try {
             /*
                 ** Función para generar archivo json de volumétricos **
             */
 
-            /* Obtener datos de la empresa */
+            /* Obtener datos de la Request */
+            $idEmpresa = $request->idEmpresa;
+            $fechaBalance = $request->fechaBalance;
+            $tipo = $request->tipo;
+            $unidad = $request->unidad;
             
+
+            /* Obtener datos de la empresa */
             $empresa = Empresa::where('id', $idEmpresa)->first();
             
             /* Obtener productos, y el producto por omisión */
@@ -1851,6 +1860,625 @@ class EmpresaController extends Controller
                         'data' => $archivo,
                         #'errores' => $erroresJson
                     ]);
+                    break;
+            }
+
+        } catch (\Throwable $th) {
+            echo $th->getMessage();
+            $this->error('Error al generar json' . $th->getMessage());
+        }
+    }
+
+    public function crearJsonMensualV1 (Request $request) {
+
+        try {
+            /*
+                ** Función para generar archivo json de volumétricos **
+            */
+
+            /* Obtener datos de la Request */
+
+            $idEmpresa = $request->idEmpresa;
+            $fechaInicio = $request->fechaInicio;
+            $fechaFinal = $request->fechaFinal;
+            $tipo = $request->tipo;
+            $unidad = $request->unidad;
+
+
+            /* Obtener valores para cálculo */
+            $fecha_inicio = strtotime(date($fechaInicio));
+            $fecha_final = strtotime(date($fechaFinal));
+            $periodo = date('Y-m', $fecha_inicio);
+            $diaFinal = intval(date('d', $fecha_final));
+
+            if ($fecha_inicio > $fecha_final) {
+                $bitacora = new Bitacora();
+                $bitacora->fecha = date('Y-m-d');
+                $bitacora->fecha_hora = date('Y-m-d H:i:s');
+                $bitacora->evento_id = 19;
+                $bitacora->descripcion1 = 'Error en generación de archivo json, fechas de inicio mayor a la fecha final. ';
+                $bitacora->descripcion2 = 'usuario: ' . $request->user()->usuario;
+                $bitacora->descripcion3 = ' fecha inicio: ' . $fechaInicio . ' | fecha final: ' . $fechaFinal;
+                $bitacora->usuario_id = $request->user()->id;
+                $bitacora->save();
+                $bitacora->load('usuario');
+                $bitacora->load('evento');
+                return response()->json([
+                    'error' => 'La fecha de inicio no debe ser mayor a la fecha final.',
+                    'data' => $bitacora
+                ],501); 
+            }
+
+            // Obtener los datos Generales de la instalacion
+            $empresa = Empresa::where('id', $idEmpresa)->first();
+            // Obtener el número de tanques
+            //$empresa->load('tanques');
+            $empresa->load('productos');
+            $empresa->load('productoOmision');
+
+            $productoOmision = $empresa->productoOmision;
+            $compuestos = $productoOmision->compuestos;
+            $propano = $compuestos[0];
+            $butano = $compuestos[1];
+
+            $numRegistro = 0;
+
+            $diasReporte = array();
+
+            for ($i=1; $i <= $diaFinal; $i++) { 
+                $diaForReporte = '';
+                if ($i < 10 ) {
+                    $diaForReporte = $periodo . '-0' . $i;
+                } else {
+                    $diaForReporte = $periodo . '-' . $i;
+                }
+                array_push($diasReporte, $diaForReporte);
+            }
+
+            $fechaHoraCorteDT = new DateTime($diasReporte[count($diasReporte) - 1] . " 05:00:00", new DateTimeZone('America/Mexico_City'));
+            $fechaHoraCorte = $fechaHoraCorteDT->format(DateTime::ATOM);
+            $mes = substr($fechaInicio, 5,2);
+            $mesInt = intval($mes);
+
+            $dataBalances = [];
+
+            $numRecepciones = 0;
+            $sumaRecepciones = 0;
+            $numEntregas = 0;
+            $sumaEntregas = 0;
+
+            $complementosRec = [];
+            $complementoSalida = [];
+
+            foreach ($diasReporte as $fechaBalance) {
+                $balance = Balance::where('fecha', $fechaBalance)->first();
+                
+                $balance->load('dictamenes');
+                if (!is_null($balance)) {
+
+                    if (count($balance->dictamenes) == 0) {
+                        $bitacora = new Bitacora();
+                        $bitacora->fecha = date('Y-m-d');
+                        $bitacora->fecha_hora = date('Y-m-d H:i:s');
+                        $bitacora->evento_id = 19;
+                        $bitacora->descripcion1 = 'Error en generación de archivo json, falta algún dictamen. ';
+                        $bitacora->descripcion2 = 'usuario: ' . $request->user()->usuario;
+                        $bitacora->descripcion3 = '';
+                        $bitacora->usuario_id = $request->user()->id;
+                        $bitacora->save();
+                        $bitacora->load('usuario');
+                        $bitacora->load('evento');
+    
+                        return response()->json([
+                            'error' => 'Falta dictamen del día: '. $balance->fecha . '  para crear el archivo json.',
+                            'data' => $bitacora
+                        ],501); 
+                    }
+
+                    /* Obtener las recepciones */
+                    $recepcionGas = DB::table('balances_duca.entradas')
+                        ->select(DB::raw('MAX(valor) - MIN(valor) AS recibido'))
+                        ->whereRaw('balance_id = ?', [$balance->id])
+                        ->first();
+                    
+                    
+
+                    if (count($balance->dictamenes) > 0) {
+                        $dictamen = $balance->dictamenes[0];
+                        $dictamen->load('cliente');
+                    }
+
+                    $fechaFolioDictamen = date('Y', strtotime($fechaBalance));
+                    $numFolioDictamen = '0';
+                    
+                    switch (true) {
+                        case $dictamen->id < 10:
+                            $numFolioDictamen = "0000".$dictamen->id;
+                            break;
+                        case $dictamen->id >= 10 && $dictamen->id < 100:
+                            $numFolioDictamen = "000".$dictamen->id;
+                            break;
+                        case $dictamen->id >= 100 && $dictamen->id < 1000:
+                            $numFolioDictamen = "00".$dictamen->id;
+                            break;
+                        case $dictamen->id >= 1000 && $dictamen->id < 10000:
+                            $numFolioDictamen = "0".$dictamen->id;
+                            break;
+                    }
+                    if (str_contains($dictamen->folioDictamen, 'TEMP')) {
+                        $folioDictamen = $dictamen->folioDictamen;
+                    } else {
+                        $folioDictamen = $dictamen->rfcDictamen . $numFolioDictamen . $fechaFolioDictamen;
+                    }
+                    //dd($recepcionGas->recibido);
+                    if ($recepcionGas->recibido > 0) {
+                        /*
+                        echo "sumaRecepciones => " . $sumaRecepciones;
+                        echo '<br />';
+                        echo "sumaRecepciones + recepcionGas->recibido => " . $sumaRecepciones;
+                        echo '<br />';
+                        */
+                        $sumaRecepciones = $sumaRecepciones + $recepcionGas->recibido;
+                        
+                        $rowComplemento = [
+                            'TipoComplemento' => 'Almacenamiento',
+                            'Dictamen' => [
+                                'RfcDictamen' => $dictamen->rfcDictamen,
+                                'LoteDictamen' => $dictamen->loteDictamen,
+                                'NumeroFolioDictamen' => $folioDictamen,
+                                'FechaEmisionDictamen' => $dictamen->fechaEmisionDictamen,
+                                'ResultadoDictamen' => $dictamen->resultadoDictamen,
+                            ],
+                            'Nacional' => [
+                                'RfcClienteOProveedor' => $dictamen->cliente->rfcCliente,
+                                'NombreClienteOProveedor' => $dictamen->cliente->nombreCliente,
+                            ]
+                        ];
+                        array_push($complementosRec,$rowComplemento);
+                        $numRecepciones++;
+                    }
+
+                    /* Obtener las entregas */
+
+                    # Entregas Llendaderas
+                    $salidas = Salida::where('balance_id', $balance->id)->where('tipo', 'l')->orderBy('id', 'asc')->get();
+                    $salidas->load('compania');
+                    
+                    foreach ($salidas as $salida) {
+                        if ($salida->cliente == 4) {
+                            $companiaSalida = Cliente::where('id', 1)->first();
+                            //dd($companiaSalida);
+                        } else {
+                            $companiaSalida = $salida->compania;
+                        }
+                        $sumaEntregas = $sumaEntregas + $salida->valor;
+                        $rowComplementoLlenadera = [
+                            'TipoComplemento' => 'Almacenamiento',
+                            'Dictamen' => [
+                                'RfcDictamen' => $dictamen->rfcDictamen,
+                                'LoteDictamen' => $dictamen->loteDictamen,
+                                'NumeroFolioDictamen' => $folioDictamen,
+                                'FechaEmisionDictamen' => $dictamen->fechaEmisionDictamen,
+                                'ResultadoDictamen' => $dictamen->resultadoDictamen,
+                            ],
+                            'Nacional' => [
+                                'RfcClienteOProveedor' => $companiaSalida->rfcCliente,
+                                'NombreClienteOProveedor' => $companiaSalida->rfcCliente,
+                            ]
+                        ];
+                        //dd($rowComplementoLlenadera);
+                        array_push($complementoSalida,$rowComplementoLlenadera);
+                        $numEntregas++;
+                        
+                    }
+
+                    
+                } else {
+                    echo 'No se encontró Balance: ' . $fechaBalance . '<br />';
+                }
+
+            }
+
+            $ultimoDia = $diasReporte[count($diasReporte) - 1 ];
+            $ultimoBalance = Balance::where('fecha', $ultimoDia)->first();
+            $almacenamientoFinal = $ultimoBalance->almacenamiento;
+            $bitacora = new Bitacora();
+            $bitacora->fecha = date('Y-m-d');
+            $bitacora->fecha_hora = date('Y-m-d H:i:s');
+            $bitacora->evento_id = 19;
+            $bitacora->descripcion1 = 'Generación de archivo json ';
+            $bitacora->descripcion2 = 'usuario: ' . $request->user()->usuario;
+            $bitacora->descripcion3 = ' fecha: ' . $fechaBalance;
+            $bitacora->usuario_id = 1;
+            $bitacora->save();
+
+            $fechaFF = $fechaFinal . " 23:59:59";
+            $bitacoras = Bitacora::whereBetween('fecha_hora', [$fechaInicio, $fechaFF])->get();
+            $bitacoras->load('user');
+            $bitacoras->load('tipoEvento');
+            $bitacoraRegistros = [];
+
+            foreach ($bitacoras as $bitacora) {
+                $numRegistro++;
+                $rowBitacora = [
+                    "NumeroRegistro" => $numRegistro,
+                    "FechaYHoraEvento" => $bitacora->fecha_hora,
+                    "UsuarioResponsable" => $bitacora->user->usuario,
+                    "TipoEvento" => $bitacora->tipoEvento->id,
+                    "DescripcionEvento" => $bitacora->descripcion1 . $bitacora->descripcion2 . $bitacora->descripcion3,
+                ];
+                array_push($bitacoraRegistros, $rowBitacora);
+            }
+
+            $prodArray = [];
+            $productoData = [
+                'ClaveProducto' => $productoOmision->clave,
+                'GasLP' => [
+                    'ComposDePropanoEnGasLP' => $propano->porcentajes->porcentaje,
+                    'ComposDeButanoEnGasLP' => $butano->porcentajes->porcentaje,
+                ],
+                'MarcaComercial' => '?',
+                'Marcaje' => '?',
+                'ConcentracionSustanciaMarcaje' => '?',
+                'ReporteDeVolumenMensual' => [
+                    'ControlDeExistencias' => [
+                        'VolumenExistenciasMes' => round($this->convertLitros($unidad, $almacenamientoFinal, $dictamen->densidad),3),
+                        'FechaYHoraEstaMedicionMes' => $fechaHoraCorte
+                    ],
+                    'Recepciones' => [
+                        'TotalRecepcionesMes' => $numRecepciones,
+                        'SumaVolumenRecepcionMes' => [
+                            'ValorNumerico' => round($this->convertLitros($unidad, $sumaRecepciones, $dictamen->densidad),3),
+                            'UnidadDeMedida' => 'UM03'
+                        ],
+                        'TotalDocumentosMes' => $numRecepciones,
+                        'ImporteTotalRecepcionesMensual' => 0,
+                        'Complemento' => $complementosRec
+                    ],
+                    'Entregas' => [
+                        'TotalEntregasMes' => $numEntregas,
+                        'SumaVolumenEntregadoMes' => [
+                            'UnidadDeMedida' => 'UM03',
+                            'ValorNumerico' => round($this->convertLitros($unidad, $sumaEntregas, $dictamen->densidad),3),
+                        ],
+                        'TotalDocumentosMes' => $numEntregas,
+                        'ImporteTotalEntregasMes' => 0,
+                        'Complemento' => $complementoSalida
+                    ]
+                ]
+            ];
+
+            array_push($prodArray, $productoData);
+
+            $caracterArray = [
+                'TipoCaracter' => $empresa->tipo_caracter,
+                'ModalidadPermiso' => $empresa->modalidad_permiso,
+                'NumPermiso' => $empresa->num_permiso,
+                'NumContratoOAsignacion' => 'Falta este dato',
+                'InstalacionAlmacenGasNatural' => 'Aqui va un texto de la empresa.'
+            ];
+
+            $geolicalizacionArray = [
+                'GeolocalizacionLatitud' => 21.8041458,
+                'GeolocalizacionLongitud' =>  -104.8409271
+            ];
+
+            $dataExport = [
+        
+                    'Version' => '1.0',
+                    'RfcContribuyente' => $empresa->rfc_contribuyente,
+                    'RfcRepresentanteLegal'=> $empresa->rfc_representante,
+                    'RfcProveedor'=> $empresa->proveedor,
+                    'Caracter' => $caracterArray,
+                    'ClaveInstalacion' => $empresa->clave_instalacion,
+                    'DescripcionInstalacion' => $empresa->descripcion_instalacion,
+                    'Geolocalizacion' => $geolicalizacionArray,
+                    'NumeroPozos' => 0,
+                    'NumeroTanques' => 0,
+                    'NumeroDuctosEntradaSalida' => '11 ¿10 llenaderas y 1 ducto?',
+                    'NumeroDuctosTransporteDistribucion' => '1 ¿Debe ir 1 ó 0?',
+                    'NumeroDispensarios' => '10 ¿Deben ser las llenaderas?',
+                    'FechaYHoraReporteMes' => $fechaHoraCorte,
+                    'Producto' => $prodArray,
+                    'BitacoraMensual' => $bitacoraRegistros
+                
+            ];
+
+            //  D ó M => Diario o Mensual / RFC Empresa / RFC Repre Legal / Fecha / ClaveInstalacion _ALM_JSON.zip
+            $permitted_chars = '0123456789ABCDEF';
+            $hash1 = substr(str_shuffle($permitted_chars), 0,8);
+            $hash2 = substr(str_shuffle($permitted_chars), 0,4);
+            $hash3 = substr(str_shuffle($permitted_chars), 0,4);
+            $hash4 = substr(str_shuffle($permitted_chars), 0,4);
+            $hash5 = substr(str_shuffle($permitted_chars), 0,12);
+            $mesStr = $mesInt < 10 ? 'ALM-000' . $mesInt : 'ALM-00' . $mesInt;
+            $penultimoDia = $diasReporte[count($diasReporte) - 2 ];
+
+            $fileNameZip = "M_". $hash1. "-" . $hash2 . "-" . $hash3. "-" . $hash4 . "-" . $hash5  . "_" . $empresa->rfc_contribuyente . "_" . $empresa->proveedor . "_" . $penultimoDia. "_" . $mesStr . "_ALM_JSON.zip";
+            $fileNameJson = "M_". $hash1. "-" . $hash2 . "-" . $hash3. "-" . $hash4 . "-" . $hash5 . "_" . $empresa->rfc_contribuyente . "_" . $empresa->proveedor . "_" . $penultimoDia. "_" . $mesStr . "_ALM_JSON.json";
+            $fileNameXls = "M_". $hash1. "-" . $hash2 . "-" . $hash3. "-" . $hash4 . "-" . $hash5 . "_" . $empresa->rfc_contribuyente . "_" . $empresa->proveedor . "_" . $penultimoDia. "_" . $mesStr . "_ALM_JSON.xlsx";
+
+            switch ($tipo) {
+                case 'data':
+                    return response()->json(
+                        $dataExport,200);
+                    break;
+                case 'export':
+                    $dataJson = json_encode($dataExport, JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
+                    //dd($dataJson);
+                    
+                    $path = '';
+                    $estadoFile = 2;
+                    if ($unidad === 'litros') {
+                        $path = 'descargables/litros/' . $mesStr . "/";  // Carpeta de archivo json
+                        $estadoFile = 1;
+                        #Revisar que no haya archivos anteriores
+                        $archivosPrevios = ArchivoMensual::where('periodo', $periodo)->get();
+                        foreach ($archivosPrevios as $archivoInBD) {
+                            $archivoInBD->estado = 2;
+                            $archivoInBD->save();
+                        }
+                    } else {
+                        $path = 'descargables/tons/' . $mesStr . "/";  // Carpeta de archivo json
+                    }
+                    
+                    $pathJson = $path . $fileNameJson;  // path carpeta + archivo
+        
+                    # Poner la data en json
+                    Storage::disk('public')->put($pathJson, $dataJson);
+        
+                    $pathToDownload = public_path(Storage::url($pathJson));
+                    // Crear carpeta para el zip
+                    $zipFolder = $path;
+                    Storage::disk('public')->makeDirectory($zipFolder, $mode=0775);
+                    
+                    $zip_file = public_path(Storage::url($zipFolder)) . '/' . $fileNameZip;
+                    // Inicializando la clase
+                    $zip = new ZipArchive();
+                    $zip->open($zip_file, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+                    $zip->addFile($pathToDownload, $fileNameJson);
+                    $zip->close();
+        
+                    $archivo = new ArchivoMensual();
+                    $archivo->nombre = $fileNameJson;
+                    $archivo->ruta = Storage::url($zipFolder) . $fileNameZip;
+                    $archivo->usuario_id = $request->user()->id;
+                    $archivo->periodo = $periodo;
+                    $archivo->estado = $estadoFile;
+                    $archivo->save();
+                    $archivo->load('usuario');
+        
+                    $bitacora = new Bitacora();
+                    $bitacora->fecha = date('Y-m-d');
+                    $bitacora->fecha_hora = date('Y-m-d H:i:s');
+                    $bitacora->evento_id = 1;
+                    $bitacora->descripcion1 = 'El usuario ' . $request->user()->usuario;
+                    $bitacora->descripcion2 = 'generó el reporte json mensual  ' . $archivo->id . ' del periodo ' . $periodo;
+                    $bitacora->descripcion3 = '';
+                    $bitacora->usuario_id = $request->user()->id;
+                    $bitacora->save();
+        
+                    return response()->json([
+                        'data' => $archivo
+                    ]);
+                    break;
+                case 'excel':
+                    $spreadsheet = new Spreadsheet();
+                    $sheet = $spreadsheet->getActiveSheet();
+                    //dd($dataExport);
+                    $row = 1;
+                    foreach ($dataExport as $key => $value) {
+                        $titulo = 'A'.$row;
+                        $valor = 'B'.$row;
+                        //dd($valor);
+                        if ($row < 16) {
+                            $sheet->setCellValue($titulo, $key);
+                            $sheet->setCellValue($valor, $value);
+                            $row++;
+                        } else {
+                            break;
+                        }
+                    }
+                    $jsProducto = $dataExport['Producto'][0];
+                    //dd($jsProducto);
+                    $sheet->setCellValue('A16', 'Producto');
+                    $sheet->setCellValue('B17', 'ClaveProducto');
+                    $sheet->setCellValue('C17', $jsProducto['ClaveProducto']);
+                    $sheet->setCellValue('B18', 'ComposDePropanoEnGasLP');
+                    $sheet->setCellValue('C18', $jsProducto['ComposDePropanoEnGasLP']);
+                    $sheet->setCellValue('B19', 'ComposDeButanoEnGasLP');
+                    $sheet->setCellValue('C19', $jsProducto['ComposDeButanoEnGasLP']);
+                    $sheet->setCellValue('B20', 'ReporteDeVolumenMensual');
+                    $sheet->setCellValue('C21', 'ControlDeExistencias');
+                    $sheet->setCellValue('D22', 'VolumenExistenciasMes');
+                    $sheet->setCellValue('E22', $jsProducto['ReporteDeVolumenMensual']['ControlDeExistencias']['VolumenExistenciasMes']);
+                    $sheet->setCellValue('D23', 'FechaYHoraEstaMedicionMes');
+                    $sheet->setCellValue('E23', $jsProducto['ReporteDeVolumenMensual']['ControlDeExistencias']['FechaYHoraEstaMedicionMes']);
+                    $sheet->setCellValue('C24', 'Recepciones');
+                    $sheet->setCellValue('D25', 'TotalRecepcionesMes');
+                    $sheet->setCellValue('E25', $jsProducto['ReporteDeVolumenMensual']['Recepciones']['TotalRecepcionesMes']);
+                    $sheet->setCellValue('D26', 'SumaVolumenRecepcionMes');
+                    $sheet->setCellValue('E27', 'ValorNumerico');
+                    $sheet->setCellValue('F27', $jsProducto['ReporteDeVolumenMensual']['Recepciones']['SumaVolumenRecepcionMes']['ValorNumerico']);
+                    $sheet->setCellValue('E28', 'UnidadDeMedida');
+                    $sheet->setCellValue('F28', $jsProducto['ReporteDeVolumenMensual']['Recepciones']['SumaVolumenRecepcionMes']['UnidadDeMedida']);
+                    $sheet->setCellValue('D29', 'TotalDocumentosMes');
+                    $sheet->setCellValue('E29', $jsProducto['ReporteDeVolumenMensual']['Recepciones']['TotalDocumentosMes']);
+                    $sheet->setCellValue('D29', 'ImporteTotalRecepcionesMensual');
+                    $sheet->setCellValue('E29', $jsProducto['ReporteDeVolumenMensual']['Recepciones']['ImporteTotalRecepcionesMensual']);
+                    $sheet->setCellValue('D30', 'Complemento');
+                    
+                    $row = 31;
+                    $complementosRec = $jsProducto['ReporteDeVolumenMensual']['Recepciones']['Complemento'];
+                    //dd($complementosRec);
+
+                    foreach ($complementosRec as $complemento) {
+                        $sheet->setCellValue('E'.$row, 'TipoComplemento');
+                        $sheet->setCellValue('F'.$row, $complemento['TipoComplemento']);
+                        $row++;
+                        $sheet->setCellValue('E'.$row, 'Dictamen');
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'RfcDictamen');
+                        $sheet->setCellValue('G'.$row, $complemento['Dictamen']['RfcDictamen']);
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'LoteDictamen');
+                        $sheet->setCellValue('G'.$row, $complemento['Dictamen']['LoteDictamen']);
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'NumeroFolioDictamen');
+                        $sheet->setCellValue('G'.$row, $complemento['Dictamen']['NumeroFolioDictamen']);
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'FechaEmisionDictamen');
+                        $sheet->setCellValue('G'.$row, $complemento['Dictamen']['FechaEmisionDictamen']);
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'ResultadoDictamen');
+                        $sheet->setCellValue('G'.$row, $complemento['Dictamen']['ResultadoDictamen']);
+                        $row++;
+                        $sheet->setCellValue('E'.$row, 'Nacional');
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'RfcClienteOProveedor');
+                        $sheet->setCellValue('G'.$row, $complemento['Nacional']['RfcClienteOProveedor']);
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'NombreClienteOProveedor');
+                        $sheet->setCellValue('G'.$row, $complemento['Nacional']['NombreClienteOProveedor']);
+                        $row++;
+                    }
+
+                    $sheet->setCellValue('C'.$row, 'Entregas');
+                    $row++;
+                    $sheet->setCellValue('D'.$row, 'TotalEntregasMes');
+                    $sheet->setCellValue('E'.$row, $jsProducto['ReporteDeVolumenMensual']['Recepciones']['TotalRecepcionesMes']);
+                    $row++;
+                    $sheet->setCellValue('D'.$row, 'SumaVolumenEntregadoMes');
+                    $row++;
+                    $sheet->setCellValue('E'.$row, 'ValorNumerico');
+                    $sheet->setCellValue('F'.$row, $jsProducto['ReporteDeVolumenMensual']['Recepciones']['SumaVolumenRecepcionMes']['ValorNumerico']);
+                    $row++;
+                    $sheet->setCellValue('E'.$row, 'UnidadDeMedida');
+                    $sheet->setCellValue('F'.$row, $jsProducto['ReporteDeVolumenMensual']['Recepciones']['SumaVolumenRecepcionMes']['UnidadDeMedida']);
+                    $row++;
+                    $sheet->setCellValue('D'.$row, 'TotalDocumentosMes');
+                    $sheet->setCellValue('E'.$row, $jsProducto['ReporteDeVolumenMensual']['Recepciones']['TotalDocumentosMes']);
+                    $row++;
+                    $sheet->setCellValue('D'.$row, 'ImporteTotalEntregasMes');
+                    $sheet->setCellValue('E'.$row, $jsProducto['ReporteDeVolumenMensual']['Recepciones']['ImporteTotalRecepcionesMensual']);
+                    $row++;
+                    $sheet->setCellValue('D'.$row, 'Complemento');
+                    $row++;
+
+                    $complementosEnt = $jsProducto['ReporteDeVolumenMensual']['Entregas']['Complemento'];
+                    //dd($complementosEnt);
+
+                    foreach ($complementosEnt as $complemento) {
+                        //dd($complemento);
+                        $sheet->setCellValue('E'.$row, 'TipoComplemento');
+                        $sheet->setCellValue('F'.$row, $complemento['TipoComplemento']);
+                        $row++;
+                        $sheet->setCellValue('E'.$row, 'Dictamen');
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'RfcDictamen');
+                        $sheet->setCellValue('G'.$row, $complemento['Dictamen']['RfcDictamen']);
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'LoteDictamen');
+                        $sheet->setCellValue('G'.$row, $complemento['Dictamen']['LoteDictamen']);
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'NumeroFolioDictamen');
+                        $sheet->setCellValue('G'.$row, $complemento['Dictamen']['NumeroFolioDictamen']);
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'FechaEmisionDictamen');
+                        $sheet->setCellValue('G'.$row, $complemento['Dictamen']['FechaEmisionDictamen']);
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'ResultadoDictamen');
+                        $sheet->setCellValue('G'.$row, $complemento['Dictamen']['ResultadoDictamen']);
+                        $row++;
+                        $sheet->setCellValue('E'.$row, 'Nacional');
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'RfcClienteOProveedor');
+                        $sheet->setCellValue('G'.$row, $complemento['Nacional']['RfcClienteOProveedor']);
+                        $row++;
+                        $sheet->setCellValue('F'.$row, 'NombreClienteOProveedor');
+                        $sheet->setCellValue('G'.$row, $complemento['Nacional']['NombreClienteOProveedor']);
+                        $row++;
+                    }
+
+                    $rowBitacora = $row;
+                    $sheet->setCellValue('A'.$rowBitacora, 'BitacoraMensual');
+                    $rowBitacora++;
+                    $registros = $dataExport['BitacoraMensual'];    // Registros de bitácora mensual
+
+                    foreach ($registros as $registro) {
+                        //dd($registro);
+                        $sheet->setCellValue('B'.$rowBitacora, 'NumeroRegistro');
+                        $sheet->setCellValue('C'.$rowBitacora, $registro['NumeroRegistro']);
+                        $rowBitacora++;
+                        $sheet->setCellValue('B'.$rowBitacora, 'FechaYHoraEvento');
+                        $sheet->setCellValue('C'.$rowBitacora, $registro['FechaYHoraEvento']);
+                        $rowBitacora++;
+                        $sheet->setCellValue('B'.$rowBitacora, 'UsuarioResponsable');
+                        $sheet->setCellValue('C'.$rowBitacora, $registro['UsuarioResponsable']);
+                        $rowBitacora++;
+                        $sheet->setCellValue('B'.$rowBitacora, 'TipoEvento');
+                        $sheet->setCellValue('C'.$rowBitacora, $registro['TipoEvento']);
+                        $rowBitacora++;
+                        $sheet->setCellValue('B'.$rowBitacora, 'DescripcionEvento');
+                        $sheet->setCellValue('C'.$rowBitacora, $registro['DescripcionEvento']);
+                        $rowBitacora++;
+                    }
+
+                    $pathE = '';
+                    if ($unidad === 'litros') {
+                        $pathE = 'descargables/litros/excel/' . $mesStr . "/";  // Carpeta de archivo json
+                    } else {
+                        $pathE = 'descargables/tons/excel/' . $mesStr . "/";  // Carpeta de archivo json
+                    }
+                    $pathExcel = $pathE . $fileNameXls;  // path carpeta + archivo
+                    
+                    $writer = new Xlsx($spreadsheet);
+                    ob_start();
+                    $writer->save('php://output');
+                    $content = ob_get_contents();
+                    ob_end_clean();
+
+                    # Poner la data en json
+                    //Storage::disk('public')->put($pathJson, json_encode($dataJson, JSON_FORCE_OBJECT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
+                    Storage::disk('public')->put($pathExcel, $content);
+
+                    $pathToDownloadE = public_path(Storage::url($pathExcel));
+                    // Crear carpeta para el zip
+                    $zipFolderE = $pathE;
+                    Storage::disk('public')->makeDirectory($zipFolderE, $mode=0775);
+                    
+                    $zip_fileE = public_path(Storage::url($zipFolderE)) . '/' . $fileNameZip;
+                    // Inicializando la clase
+                    $zip = new ZipArchive();
+                    $zip->open($zip_fileE, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+                    $zip->addFile($pathToDownloadE, $fileNameXls);
+                    $zip->close();
+
+                    $archivo = new ArchivoMensual();
+                    $archivo->nombre = $fileNameXls;
+                    $archivo->ruta = Storage::url($zipFolderE) . $fileNameZip;
+                    $archivo->usuario_id = $request->user()->id;
+                    $archivo->periodo = $periodo;
+                    $archivo->estado = 2;
+                    $archivo->save();
+                    $archivo->load('usuario');
+
+                    $bitacora = new Bitacora();
+                    $bitacora->fecha = date('Y-m-d');
+                    $bitacora->fecha_hora = date('Y-m-d H:i:s');
+                    $bitacora->evento_id = 1;
+                    $bitacora->descripcion1 = 'El usuario ' . $request->user()->usuario;
+                    $bitacora->descripcion2 = 'generó el reporte excel ' . $archivo->id . ' del día ' . $balance->fecha;
+                    $bitacora->descripcion3 = '';
+                    $bitacora->usuario_id = $request->user()->id;
+                    $bitacora->save();
+
+                    //return response()->download($zip_file);
+                    return response()->json([
+                        'data' => $archivo
+                    ]);
+
+
                     break;
             }
 

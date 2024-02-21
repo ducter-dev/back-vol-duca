@@ -78,7 +78,7 @@ class ObtenerSalidas extends Command
             }
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error($e->getMessage());
+            Log::error("Error al registrar salidas {$e->getMessage()}.");
             $this->info("Error al registrar salidas {$e->getMessage()}.");
         }
     }
