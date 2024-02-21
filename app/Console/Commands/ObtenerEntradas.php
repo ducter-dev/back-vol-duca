@@ -74,7 +74,7 @@ class ObtenerEntradas extends Command
             }
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error($e->getMessage());
+            Log::error("Error al registrar entradas: {$e->getMessage()}.");
             $this->info("Error al registrar entradas: {$e->getMessage()}.");
         }
     }

@@ -226,7 +226,6 @@ class UserController extends Controller
         }
 
         if (Hash::check(request('password'), $user->contrasena)) {
-            
             if ($user->tokens()->where('expires_at', '>', $ahora)->count() > 0) {
                 return $this->error("Actualmente tiene una sesión activa.", code:401);
             }

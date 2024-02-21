@@ -9,6 +9,8 @@ class ArchivoMensual extends Model
 {
     use HasFactory;
 
+    protected $table = 'archivo_mensuales';
+
     protected $fillable = [
         'nombre',
         'ruta',

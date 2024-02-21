@@ -57,7 +57,7 @@ class CrearBalance extends Command
             
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error($e->getMessage());
+            Log::error("Error al crear balance diario: {$e->getMessage()}.");
             $this->error("Error al crear balance diario: {$e->getMessage()}.");
         }
     }
