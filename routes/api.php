@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\ArchivoController;
+use App\Http\Controllers\ArchivoMensualController;
 use App\Http\Controllers\BalanceController;
 use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\ClienteController;
@@ -40,6 +41,7 @@ Route::post('restore/{role}', [RolController::class, 'restoreRol'])->middleware(
 Route::resource('empresas', EmpresaController::class)->middleware(['auth:sanctum']);
 Route::resource('balances', BalanceController::class)->middleware(['auth:sanctum']);
 Route::resource('archivos', ArchivoController::class)->middleware(['auth:sanctum']);
+Route::resource('archivosMensuales', ArchivoMensualController::class)->middleware('auth:sanctum');
 Route::resource('bitacora', BitacoraController::class)->middleware(['auth:sanctum']);
 Route::resource('clientes', ClienteController::class)->middleware(['auth:sanctum']);
 Route::resource('compuestos', CompuestoController::class)->middleware(['auth:sanctum']);

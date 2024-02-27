@@ -4,7 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ArchivoResource extends JsonResource
+class ArchivoMensualResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -19,16 +19,13 @@ class ArchivoResource extends JsonResource
             'nombre' => $this->nombre,
             'ruta' => $this->ruta,
             'usuario_id' => $this->usuario_id,
-            'usuario' => new UserResource($this->usuario),
-            'balance_id' => $this->balance_id,
             'periodo' => $this->periodo,
-            'balance' => new BalanceResource($this->balance),
+            'usuario' => new UserResource($this->usuario),
             'estado' => $this->estado,
             'creado' => $this->created_at->format('Y-m-d H:i:s'),
             'actualizado' => $this->updated_at->format('Y-m-d H:i:s'),
         ];
 
         return $data;
-
     }
 }
