@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ArchivoMensualResource;
 use App\Models\ArchivoMensual;
 use Illuminate\Http\Request;
 
@@ -14,7 +15,14 @@ class ArchivoMensualController extends Controller
      */
     public function index()
     {
-        //
+        $archivos = ArchivoMensual::orderBy('estado', 'asc')->orderBy('id', 'asc')->paginate(15);
+        $archivos->load('usuario');
+        $archivos = ArchivoMensualResource::collection($archivos)->additional([
+            'status' => 'success',
+            "message" => 'Información consultada correctamente.',
+        ]);
+        
+        return $archivos;
     }
 
     /**
