@@ -14,6 +14,7 @@ use App\Http\Controllers\DictamenController;
 use \App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\PermisoController;
+use App\Http\Controllers\PrestamoController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\RevisionController;
 use App\Http\Controllers\RolController;
@@ -61,10 +62,17 @@ Route::get('productos-all', [ProductoController::class, 'all'])->middleware('aut
 Route::get('compuestos-all', [CompuestoController::class, 'all'])->middleware('auth:sanctum');
 Route::get('perfiles-all', [RolController::class, 'all'])->middleware('auth:sanctum');
 Route::post('productos-compuestos', [ProductoController::class, 'attachCompuestos'])->middleware(['auth:sanctum']);
-Route::get('json/fecha/{fecha}', [EmpresaController::class, 'checkDataExperion'])->middleware('auth:api');
+Route::get('json/fecha/{fecha}', [EmpresaController::class, 'checkDataExperion'])->middleware('auth:sanctum');
 
 // Errores
 Route::get('errores', [BitacoraController::class, 'filtrarErrores'])->middleware('auth:sanctum');
+
+// Prestamos
+Route::get('prestamos/{fecha}', [PrestamoController::class, 'index'])->middleware('auth:sanctum');
+Route::post('prestamos', [PrestamoController::class, 'store'])->middleware('auth:sanctum');
+Route::get('prestamos/{id_prestamo}', [PrestamoController::class, 'show'])->middleware('auth:sanctum');
+Route::put('prestamos/{id_prestamo}', [PrestamoController::class, 'update'])->middleware('auth:sanctum');
+Route::delete('prestamos/{id_prestamo}', [PrestamoController::class, 'destroy'])->middleware('auth:sanctum');
 
 Route::group([
     'prefix' => 'users'
