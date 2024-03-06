@@ -2,26 +2,33 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\PrestamoResource;
 use App\Models\Bitacora;
 use App\Models\Prestamo;
+use App\Traits\ApiResponder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class PrestamoController extends Controller
 {
+    use ApiResponder;
     /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
      */
-    public function index($fecha)
+    public function index()
     {
-        $prestamos = Prestamo::where('fecha', $fecha)->get();
+        $prestamos = Prestamo::paginate(15);
         $prestamos->load('clienteCompra');
         $prestamos->load('clienteVenta');
-        return response()->json([
-            'data' => $prestamos,
-        ], 200);
+
+        $prestamos = PrestamoResource::collection($prestamos)->additional([
+            'status' => 'success',
+            "message" => 'Información consultada correctamente.',
+        ]);
+
+        return $prestamos;
     }
 
     /**
@@ -67,10 +74,11 @@ class PrestamoController extends Controller
             $bitacora->usuario_id = $request->user()->id;
             $bitacora->save();
 
-
-            return response()->json([
-                'data' => $prestamo
+            $resource = new PrestamoResource($prestamo);
+            return $this->success('Préstamo registrado correctamente.', [
+                'prestamo' => $resource
             ],201);
+            
 
         }
         catch (\Exception $e) {
@@ -165,8 +173,9 @@ class PrestamoController extends Controller
             $bitacora->usuario_id = $request->user()->id;
             $bitacora->save();
             
-            return response()->json([
-                'data' => $prestamo
+            $resource = new PrestamoResource($prestamo);
+            return $this->success('Préstamo actualizado correctamente.', [
+                'prestamo' => $resource
             ],201);
 
         } catch (\Exception $e) {
@@ -196,8 +205,9 @@ class PrestamoController extends Controller
             $bitacora->usuario_id = $request->user()->id;
             $bitacora->save();
 
-            return response()->json([
-                'data' => $prestamo
+            $resource = new PrestamoResource($prestamo);
+            return $this->success('Préstamo  ' . $prestamo->id . ' eliminado correctamente.', [
+                'prestamo' => $resource
             ],202);
 
         } catch (\Throwable $th) {

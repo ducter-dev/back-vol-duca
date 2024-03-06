@@ -68,7 +68,7 @@ Route::get('json/fecha/{fecha}', [EmpresaController::class, 'checkDataExperion']
 Route::get('errores', [BitacoraController::class, 'filtrarErrores'])->middleware('auth:sanctum');
 
 // Prestamos
-Route::get('prestamos/{fecha}', [PrestamoController::class, 'index'])->middleware('auth:sanctum');
+Route::get('prestamos', [PrestamoController::class, 'index'])->middleware('auth:sanctum');
 Route::post('prestamos', [PrestamoController::class, 'store'])->middleware('auth:sanctum');
 Route::get('prestamos/{id_prestamo}', [PrestamoController::class, 'show'])->middleware('auth:sanctum');
 Route::put('prestamos/{id_prestamo}', [PrestamoController::class, 'update'])->middleware('auth:sanctum');
