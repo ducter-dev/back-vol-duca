@@ -20,6 +20,7 @@ class AlmacenResource extends JsonResource
             'inicio' => $this->inicio,
             'volumen' => $this->volumen,
             'fin' => $this->fin,
+            'cliente_id' => $this->cliente_id,
             'cliente' => new ClienteResource($this->cliente),
             'creado' => $this->created_at->format('Y-m-d H:i:s'),
             'actualizado' => $this->updated_at->format('Y-m-d H:i:s'),
