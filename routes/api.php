@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AlmacenController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -73,6 +74,13 @@ Route::post('prestamos', [PrestamoController::class, 'store'])->middleware('auth
 Route::get('prestamos/{id_prestamo}', [PrestamoController::class, 'show'])->middleware('auth:sanctum');
 Route::put('prestamos/{id_prestamo}', [PrestamoController::class, 'update'])->middleware('auth:sanctum');
 Route::delete('prestamos/{id_prestamo}', [PrestamoController::class, 'destroy'])->middleware('auth:sanctum');
+
+// Almacén
+Route::get('almacenes', [AlmacenController::class, 'index'])->middleware('auth:sanctum');
+Route::post('almacenes', [AlmacenController::class, 'store'])->middleware('auth:sanctum');
+Route::get('almacenes/{id_almacen}', [AlmacenController::class, 'show'])->middleware('auth:sanctum');
+Route::put('almacenes/{id_almacen}', [AlmacenController::class, 'update'])->middleware('auth:sanctum');
+Route::delete('almacenes/{id_almacen}', [AlmacenController::class, 'destroy'])->middleware('auth:sanctum');
 
 Route::group([
     'prefix' => 'users'
